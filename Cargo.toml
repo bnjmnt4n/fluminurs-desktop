@@ -1,0 +1,13 @@
+[package]
+name = "fluminurs-desktop"
+version = "0.1.0"
+edition = "2018"
+description = "A desktop client for LumiNUS"
+authors = ["Benjamin Tan <benjamin@dev.ofcr.se"]
+repository = "http://github.com/bnjmnt4n/fluminurs-desktop"
+readme = "README.md"
+license = "MIT"
+
+[dependencies]
+fluminurs = { git = "https://github.com/fluminurs/fluminurs" }
+iced = { version = "0.3", features = ["tokio"] }
