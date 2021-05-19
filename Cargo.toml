@@ -11,3 +11,4 @@ license = "MIT"
 [dependencies]
 fluminurs = { git = "https://github.com/fluminurs/fluminurs" }
 iced = { version = "0.3", features = ["tokio"] }
+futures-util = "0.3"
