@@ -1,18 +1,20 @@
 use iced::{scrollable, Column, Command, Container, Element, Length, Scrollable, Text};
+use fluminurs::file::File;
+use fluminurs::resource::Resource;
 
 use crate::message::Message;
 
 #[derive(Debug, Clone)]
-pub struct FilesState {
+pub struct FilesPage {
     scroll: scrollable::State,
 }
 
 #[derive(Debug, Clone)]
 pub enum FilesMessage {}
 
-impl FilesState {
+impl FilesPage {
     pub fn default() -> Self {
-        FilesState {
+        Self {
             scroll: scrollable::State::new(),
         }
     }
@@ -21,12 +23,12 @@ impl FilesState {
         Command::none()
     }
 
-    pub fn view(&mut self, files: &Option<Vec<String>>) -> Element<FilesMessage> {
+    pub fn view(&mut self, files: &Option<Vec<File>>) -> Element<FilesMessage> {
         let files: Element<_> = if let Some(files) = files {
             files
                 .iter()
                 .fold(Column::new().spacing(20), |column, file| {
-                    column.push(Text::new(file))
+                    column.push(Text::new(file.path().display().to_string()))
                 })
                 .into()
         } else {

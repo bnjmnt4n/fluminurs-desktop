@@ -1,14 +1,16 @@
 use fluminurs::{module::Module, Api};
+use fluminurs::file::File;
 use iced::{executor, Application, Clipboard, Column, Command, Element, Settings};
 
 mod api;
 mod header;
 mod message;
 mod pages;
+mod utils;
 
-use crate::header::HeaderState;
+use crate::header::Header;
 use crate::message::Message;
-use crate::pages::{Page, PageStates};
+use crate::pages::{Page, Pages};
 
 pub fn main() -> iced::Result {
     FluminursDesktop::run(Settings::default())
@@ -17,11 +19,11 @@ pub fn main() -> iced::Result {
 pub struct FluminursDesktop {
     api: Option<Api>,
     modules: Option<Vec<Module>>,
-    files: Option<Vec<String>>,
+    files: Option<Vec<File>>,
     name: Option<String>,
-    page: Page,
-    page_states: PageStates,
-    header_state: HeaderState,
+    current_page: Page,
+    pages: Pages,
+    header: Header,
 }
 
 #[derive(Debug, Clone)]
@@ -29,14 +31,14 @@ pub struct Error;
 
 impl FluminursDesktop {
     fn default() -> Self {
-        FluminursDesktop {
+        Self {
             api: None,
             name: None,
             modules: None,
             files: None,
-            page: Page::Login,
-            page_states: PageStates::default(),
-            header_state: HeaderState::default(),
+            current_page: Page::Login,
+            pages: Pages::default(),
+            header: Header::default(),
         }
     }
 }
@@ -47,14 +49,14 @@ impl Application for FluminursDesktop {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        (FluminursDesktop::default(), Command::none())
+        (Self::default(), Command::none())
     }
 
     fn title(&self) -> String {
-        match self.page {
-            Page::Login => String::from("Login - fluminurs-desktop"),
-            Page::Modules => String::from("Modules - fluminurs-desktop"),
-            Page::Files => String::from("Files - fluminurs-desktop"),
+        match self.current_page {
+            Page::Login => String::from("Login"),
+            Page::Modules => String::from("Modules"),
+            Page::Files => String::from("Files"),
         }
     }
 
@@ -64,20 +66,32 @@ impl Application for FluminursDesktop {
         _clipboard: &mut Clipboard,
     ) -> Command<Self::Message> {
         match message {
-            Message::LoginMessage(message) => self.page_states.login.update(message),
-            Message::ModulesMessage(message) => self.page_states.modules.update(message),
-            Message::FilesMessage(message) => self.page_states.files.update(message),
+            Message::LoginPage(message) => self.pages.login.update(message),
+            Message::ModulesPage(message) => self.pages.modules.update(message),
+            Message::FilesPage(message) => self.pages.files.update(message),
+            Message::Header(message) => self.header.update(message),
             Message::SwitchPage(page) => {
-                self.page = page;
+                self.current_page = page;
                 Command::none()
             }
             Message::LoadedAPI(result) => match result {
-                Ok((api, name, modules, files)) => {
-                    self.api = Some(api);
-                    self.modules = Some(modules);
-                    self.files = Some(files);
+                Ok((api, name, modules)) => {
                     self.name = Some(name);
-                    self.page = Page::Modules;
+                    self.api = Some(api.clone());
+                    self.modules = Some(modules.clone());
+                    self.current_page = Page::Modules;
+
+                    // TODO: once we've logged in, fetch the other content types as well.
+                    Command::perform(
+                        api::fetch_files(api, modules),
+                        Message::LoadedFiles
+                    )
+                },
+                Err(_) => Command::none(),
+            },
+            Message::LoadedFiles(result) => match result {
+                Ok(files) => {
+                    self.files = Some(files);
                     Command::none()
                 }
                 Err(_) => Command::none(),
@@ -86,32 +100,36 @@ impl Application for FluminursDesktop {
     }
 
     fn view(&mut self) -> Element<Self::Message> {
-        let page = match self.page {
-            Page::Login => self.page_states.login.view().map(Message::LoginMessage),
-            Page::Modules => self
-                .page_states
-                .modules
-                .view(&self.modules)
-                .map(Message::ModulesMessage),
-            Page::Files => self
-                .page_states
-                .files
-                .view(&self.files)
-                .map(Message::FilesMessage),
+        let display_header = match self.current_page {
+            Page::Login => false,
+            _ => true,
         };
 
-        match self.page {
-            Page::Login => page,
-            _ => {
-                let header = self.header_state.view(&self.name).map(Message::SwitchPage);
+        let page = match self.current_page {
+            Page::Login => self.pages.login.view().map(Message::LoginPage),
+            Page::Modules => self
+                .pages
+                .modules
+                .view(&self.modules)
+                .map(Message::ModulesPage),
+            Page::Files => self
+                .pages
+                .files
+                .view(&self.files)
+                .map(Message::FilesPage),
+        };
 
-                Column::new()
-                    .max_width(800)
-                    .spacing(20)
-                    .push(header)
-                    .push(page)
-                    .into()
-            }
+        if display_header {
+            let header = self.header.view(&self.name).map(Message::Header);
+
+            Column::new()
+                .max_width(800)
+                .spacing(20)
+                .push(header)
+                .push(page)
+                .into()
+        } else {
+            page
         }
     }
 }

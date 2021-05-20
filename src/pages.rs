@@ -2,9 +2,9 @@ pub mod files;
 pub mod login;
 pub mod modules;
 
-use crate::pages::files::FilesState;
-use crate::pages::login::LoginState;
-use crate::pages::modules::ModulesState;
+use crate::pages::files::FilesPage;
+use crate::pages::login::LoginPage;
+use crate::pages::modules::ModulesPage;
 
 #[derive(Debug, Clone)]
 pub enum Page {
@@ -13,18 +13,18 @@ pub enum Page {
     Files,
 }
 
-pub struct PageStates {
-    pub login: LoginState,
-    pub modules: ModulesState,
-    pub files: FilesState,
+pub struct Pages {
+    pub login: LoginPage,
+    pub modules: ModulesPage,
+    pub files: FilesPage,
 }
 
-impl PageStates {
+impl Pages {
     pub fn default() -> Self {
-        PageStates {
-            login: LoginState::default(),
-            modules: ModulesState::default(),
-            files: FilesState::default(),
+        Self {
+            login: LoginPage::default(),
+            modules: ModulesPage::default(),
+            files: FilesPage::default(),
         }
     }
 }

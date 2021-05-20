@@ -4,10 +4,11 @@ use iced::{
 };
 
 use crate::api;
+use crate::utils::clean_username;
 use crate::message::Message;
 
 #[derive(Debug, Clone)]
-pub struct LoginState {
+pub struct LoginPage {
     username: String,
     password: String,
     username_input: text_input::State,
@@ -23,9 +24,9 @@ pub enum LoginMessage {
     Submit,
 }
 
-impl LoginState {
+impl LoginPage {
     pub fn default() -> Self {
-        LoginState {
+        Self {
             username: "".to_string(),
             password: "".to_string(),
             username_input: text_input::State::new(),
@@ -45,21 +46,24 @@ impl LoginState {
                 self.password = string;
                 Command::none()
             }
-            LoginMessage::Submit => Command::perform(
-                api::login(self.username.clone(), self.password.clone()),
-                Message::LoadedAPI,
-            ),
+            LoginMessage::Submit => {
+                self.loading = true;
+                Command::perform(
+                    api::login(clean_username(&self.username), self.password.clone()),
+                    Message::LoadedAPI,
+                )
+            }
         }
     }
 
     pub fn view(&mut self) -> Element<LoginMessage> {
-        let LoginState {
+        let LoginPage {
             username,
             password,
             username_input,
             password_input,
             login_button,
-            ..
+            loading
         } = self;
 
         // TODO: tab navigation, error handling
@@ -96,9 +100,11 @@ impl LoginState {
             .push(password_input.style(style::TextInput::UsernameInput))
             .push(Button::new(login_button, Text::new("Login")).on_press(LoginMessage::Submit));
 
-        // if loading {
-        //     content = content.push(Text::new("Loading..."));
-        // }
+        let content = if *loading {
+            content.push(Text::new("Signing in..."))
+        } else {
+            content
+        };
 
         let container = Container::new(content)
             .width(Length::Fill)

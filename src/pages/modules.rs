@@ -4,16 +4,16 @@ use crate::message::Message;
 use fluminurs::module::Module;
 
 #[derive(Debug, Clone)]
-pub struct ModulesState {
+pub struct ModulesPage {
     scroll: scrollable::State,
 }
 
 #[derive(Debug, Clone)]
 pub enum ModulesMessage {}
 
-impl ModulesState {
+impl ModulesPage {
     pub fn default() -> Self {
-        ModulesState {
+        Self {
             scroll: scrollable::State::new(),
         }
     }
