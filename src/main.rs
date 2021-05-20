@@ -1,16 +1,20 @@
 use fluminurs::{module::Module, Api};
-use fluminurs::file::File;
 use iced::{executor, Application, Clipboard, Column, Command, Element, Settings};
 
 mod api;
 mod header;
 mod message;
 mod pages;
+mod resource;
 mod utils;
 
 use crate::header::Header;
 use crate::message::Message;
 use crate::pages::{Page, Pages};
+use crate::resource::DownloadStatus;
+use crate::resource::Resource;
+use crate::resource::ResourceMessage;
+use crate::resource::ResourceState;
 
 pub fn main() -> iced::Result {
     FluminursDesktop::run(Settings::default())
@@ -19,7 +23,7 @@ pub fn main() -> iced::Result {
 pub struct FluminursDesktop {
     api: Option<Api>,
     modules: Option<Vec<Module>>,
-    files: Option<Vec<File>>,
+    files: Option<Vec<ResourceState>>,
     name: Option<String>,
     current_page: Page,
     pages: Pages,
@@ -82,11 +86,8 @@ impl Application for FluminursDesktop {
                     self.current_page = Page::Modules;
 
                     // TODO: once we've logged in, fetch the other content types as well.
-                    Command::perform(
-                        api::fetch_files(api, modules),
-                        Message::LoadedFiles
-                    )
-                },
+                    Command::perform(api::fetch_files(api, modules), Message::LoadedFiles)
+                }
                 Err(_) => Command::none(),
             },
             Message::LoadedFiles(result) => match result {
@@ -94,6 +95,47 @@ impl Application for FluminursDesktop {
                     self.files = Some(files);
                     Command::none()
                 }
+                Err(_) => Command::none(),
+            },
+            Message::ResourceMessage((path, message)) => match message {
+                ResourceMessage::DownloadResource => {
+                    let api = self.api.as_ref().unwrap().clone();
+                    self.files
+                        .as_mut()
+                        .and_then(|files| {
+                            files
+                                .iter_mut()
+                                .find(|file| file.resource_path().eq(&path))
+                                .and_then(|file| {
+                                    file.download_status = DownloadStatus::Downloading;
+
+                                    match &file.resource {
+                                        Resource::File(resource) => Some(Command::perform(
+                                            api::download_resource(api, resource.clone()),
+                                            Message::ResourceDownloaded,
+                                        )),
+                                    }
+                                })
+                        })
+                        .unwrap_or_else(|| Command::none())
+                }
+                ResourceMessage::OpenResource => Command::none(),
+            },
+            Message::ResourceDownloaded(message) => match message {
+                Ok(path) => self
+                    .files
+                    .as_mut()
+                    .and_then(|files| {
+                        files
+                            .iter_mut()
+                            .find(|file| file.resource_path().eq(&path))
+                            .and_then(|file| {
+                                file.download_status = DownloadStatus::Downloaded;
+
+                                Some(Command::none())
+                            })
+                    })
+                    .unwrap_or_else(|| Command::none()),
                 Err(_) => Command::none(),
             },
         }
@@ -115,7 +157,7 @@ impl Application for FluminursDesktop {
             Page::Files => self
                 .pages
                 .files
-                .view(&self.files)
+                .view(&mut self.files)
                 .map(Message::FilesPage),
         };
 

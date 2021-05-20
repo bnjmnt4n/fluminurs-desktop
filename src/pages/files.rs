@@ -1,8 +1,7 @@
 use iced::{scrollable, Column, Command, Container, Element, Length, Scrollable, Text};
-use fluminurs::file::File;
-use fluminurs::resource::Resource;
 
 use crate::message::Message;
+use crate::resource::{ResourceMessage, ResourceState};
 
 #[derive(Debug, Clone)]
 pub struct FilesPage {
@@ -10,7 +9,9 @@ pub struct FilesPage {
 }
 
 #[derive(Debug, Clone)]
-pub enum FilesMessage {}
+pub enum FilesMessage {
+    FileMessage(String, ResourceMessage),
+}
 
 impl FilesPage {
     pub fn default() -> Self {
@@ -19,16 +20,26 @@ impl FilesPage {
         }
     }
 
-    pub fn update(&mut self, _message: FilesMessage) -> Command<Message> {
-        Command::none()
+    pub fn update(&mut self, message: FilesMessage) -> Command<Message> {
+        match message {
+            FilesMessage::FileMessage(path, message) => {
+                Command::perform(async { (path, message) }, Message::ResourceMessage)
+            }
+        }
     }
 
-    pub fn view(&mut self, files: &Option<Vec<File>>) -> Element<FilesMessage> {
-        let files: Element<_> = if let Some(files) = files {
+    pub fn view<'a>(
+        &'a mut self,
+        files: &'a mut Option<Vec<ResourceState>>,
+    ) -> Element<'a, FilesMessage> {
+        let files: Element<_> = if let Some(ref mut files) = files {
             files
-                .iter()
+                .iter_mut()
                 .fold(Column::new().spacing(20), |column, file| {
-                    column.push(Text::new(file.path().display().to_string()))
+                    let resource_path = file.resource_path().clone();
+                    column.push(file.view().map(move |message| {
+                        FilesMessage::FileMessage(resource_path.clone(), message)
+                    }))
                 })
                 .into()
         } else {

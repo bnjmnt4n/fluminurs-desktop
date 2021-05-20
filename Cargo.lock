@@ -773,7 +773,7 @@ checksum = "7bad48618fdb549078c333a7a8528acb57af271d0433bdecd523eb620628364e"
 [[package]]
 name = "fluminurs"
 version = "1.2.0"
-source = "git+https://github.com/bnjmnt4n/fluminurs?branch=desktop#96e91ecea1fb9e54d68fbb30452aa504bce592f8"
+source = "git+https://github.com/bnjmnt4n/fluminurs?branch=desktop#8e43ab2986d6f7efd5dd5ceb8933251fd88ef00f"
 dependencies = [
  "ammonia",
  "async-trait",

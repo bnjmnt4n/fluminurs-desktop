@@ -4,8 +4,8 @@ use iced::{
 };
 
 use crate::api;
-use crate::utils::clean_username;
 use crate::message::Message;
+use crate::utils::clean_username;
 
 #[derive(Debug, Clone)]
 pub struct LoginPage {
@@ -63,7 +63,7 @@ impl LoginPage {
             username_input,
             password_input,
             login_button,
-            loading
+            loading,
         } = self;
 
         // TODO: tab navigation, error handling
