@@ -1,4 +1,7 @@
-use iced::{button, text_input, Button, Column, Command, Container, Element, Text, TextInput, Length, HorizontalAlignment, Align};
+use iced::{
+    button, text_input, Align, Button, Column, Command, Container, Element, HorizontalAlignment,
+    Length, Text, TextInput,
+};
 
 use crate::api;
 use crate::message::Message;
@@ -19,7 +22,6 @@ pub enum LoginMessage {
     PasswordEdited(String),
     Submit,
 }
-
 
 impl LoginState {
     pub fn default() -> Self {
@@ -85,7 +87,12 @@ impl LoginState {
             // .padding(100)
             .max_width(800)
             .spacing(10)
-            .push(Text::new("Welcome to Fluminurs-Desktop").size(40).width(Length::Fill).horizontal_alignment(HorizontalAlignment::Center))
+            .push(
+                Text::new("Fluminurs-Desktop")
+                    .size(40)
+                    .width(Length::Fill)
+                    .horizontal_alignment(HorizontalAlignment::Center),
+            )
             .push(username_input.style(style::TextInput::UsernameInput))
             .push(password_input.style(style::TextInput::UsernameInput))
             .push(Button::new(login_button, Text::new("Login")).on_press(LoginMessage::Submit));
@@ -94,7 +101,11 @@ impl LoginState {
         //     content = content.push(Text::new("Loading..."));
         // }
 
-        let container = Container::new(content).width(Length::Fill).height(Length::Fill).center_x().center_y();
+        let container = Container::new(content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .center_x()
+            .center_y();
         container.into()
         // content.into()
     }
@@ -113,19 +124,34 @@ mod style {
                 background: Background::Color(Color::WHITE),
                 border_color: Color::BLACK,
                 border_width: 1.0,
-                border_radius: 1.0
+                border_radius: 1.0,
             }
         }
         fn focused(&self) -> text_input::Style {
             text_input::Style {
-                background: Background::Color(Color {r: 1.0, g: 1.0, b: 0.878, a: 1.0}),
-                border_color:  Color {r: 1.0, g: 0.0, b: 0.0, a: 1.0},
+                background: Background::Color(Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 0.878,
+                    a: 1.0,
+                }),
+                border_color: Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                },
                 border_width: 1.0,
-                border_radius: 1.0
+                border_radius: 1.0,
             }
         }
         fn placeholder_color(&self) -> Color {
-            Color {r: 0.753, g: 0.753, b: 0.753, a: 1.0}
+            Color {
+                r: 0.753,
+                g: 0.753,
+                b: 0.753,
+                a: 1.0,
+            }
         }
         fn value_color(&self) -> Color {
             Color::BLACK
