@@ -84,11 +84,10 @@ impl LoginState {
 
         let content = Column::new()
             .align_items(Align::Center)
-            // .padding(100)
-            .max_width(800)
+            .max_width(400)
             .spacing(10)
             .push(
-                Text::new("Fluminurs-Desktop")
+                Text::new("fluminurs-desktop")
                     .size(40)
                     .width(Length::Fill)
                     .horizontal_alignment(HorizontalAlignment::Center),
@@ -106,8 +105,8 @@ impl LoginState {
             .height(Length::Fill)
             .center_x()
             .center_y();
+
         container.into()
-        // content.into()
     }
 }
 
