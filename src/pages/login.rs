@@ -1,4 +1,4 @@
-use iced::{button, text_input, Button, Column, Command, Element, Text, TextInput};
+use iced::{button, text_input, Button, Column, Command, Container, Element, Text, TextInput, Length, HorizontalAlignment, Align};
 
 use crate::api;
 use crate::message::Message;
@@ -19,6 +19,7 @@ pub enum LoginMessage {
     PasswordEdited(String),
     Submit,
 }
+
 
 impl LoginState {
     pub fn default() -> Self {
@@ -80,19 +81,57 @@ impl LoginState {
         .padding(10);
 
         let content = Column::new()
+            .align_items(Align::Center)
+            // .padding(100)
             .max_width(800)
-            .spacing(20)
-            .push(Text::new("fluminurs-desktop").size(40))
-            .push(Text::new("Username"))
-            .push(username_input)
-            .push(Text::new("Password"))
-            .push(password_input)
+            .spacing(10)
+            .push(Text::new("Welcome to Fluminurs-Desktop").size(40).width(Length::Fill).horizontal_alignment(HorizontalAlignment::Center))
+            .push(username_input.style(style::TextInput::UsernameInput))
+            .push(password_input.style(style::TextInput::UsernameInput))
             .push(Button::new(login_button, Text::new("Login")).on_press(LoginMessage::Submit));
 
         // if loading {
         //     content = content.push(Text::new("Loading..."));
         // }
 
-        content.into()
+        let container = Container::new(content).width(Length::Fill).height(Length::Fill).center_x().center_y();
+        container.into()
+        // content.into()
+    }
+}
+
+mod style {
+    use iced::{text_input, Background, Color};
+
+    pub enum TextInput {
+        UsernameInput,
+    }
+
+    impl text_input::StyleSheet for TextInput {
+        fn active(&self) -> text_input::Style {
+            text_input::Style {
+                background: Background::Color(Color::WHITE),
+                border_color: Color::BLACK,
+                border_width: 1.0,
+                border_radius: 1.0
+            }
+        }
+        fn focused(&self) -> text_input::Style {
+            text_input::Style {
+                background: Background::Color(Color {r: 1.0, g: 1.0, b: 0.878, a: 1.0}),
+                border_color:  Color {r: 1.0, g: 0.0, b: 0.0, a: 1.0},
+                border_width: 1.0,
+                border_radius: 1.0
+            }
+        }
+        fn placeholder_color(&self) -> Color {
+            Color {r: 0.753, g: 0.753, b: 0.753, a: 1.0}
+        }
+        fn value_color(&self) -> Color {
+            Color::BLACK
+        }
+        fn selection_color(&self) -> Color {
+            Color::BLACK
+        }
     }
 }
