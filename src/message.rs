@@ -1,4 +1,5 @@
 use iced::Command;
+extern crate open;
 
 use fluminurs::module::Module;
 use fluminurs::Api;
@@ -123,7 +124,14 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 }
             }
             // TODO: open downloaded file
-            ResourceMessage::OpenResource => Command::none(),
+            ResourceMessage::OpenResource => {
+                let opened = open::that(path);
+                match opened {
+                    Ok(..) => println!("Opened Successfully"),
+                    Err(..) => println!("Failed to open"),
+                }
+                Command::none()
+            }
         },
 
         // Update resource download status, either marking as complete or error.

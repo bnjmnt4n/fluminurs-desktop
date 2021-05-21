@@ -12,3 +12,4 @@ license = "MIT"
 fluminurs = { git = "https://github.com/bnjmnt4n/fluminurs", branch = "desktop" }
 iced = { version = "0.3", features = ["tokio"] }
 futures-util = "0.3"
+open = "1.7.0"
