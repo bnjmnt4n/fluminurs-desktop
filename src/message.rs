@@ -26,6 +26,7 @@ pub enum Message {
     LoadedResources(Result<(ResourceType, Vec<ResourceState>), Error>),
     ResourceMessage((ResourceType, String, ResourceMessage)),
     ResourceDownloaded(Result<(ResourceType, String), Error>),
+    OpenFileResult(Result<std::process::ExitStatus, std::io::Error>),
 }
 
 pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command<Message> {
@@ -123,16 +124,24 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                     None => Command::none(),
                 }
             }
-            // TODO: open downloaded file
+
+            // Open downloaded file.
+            // TODO: doesn't work well on Linux.
             ResourceMessage::OpenResource => {
-                let opened = open::that(path);
-                match opened {
-                    Ok(..) => println!("Opened Successfully"),
-                    Err(..) => println!("Failed to open"),
-                }
-                Command::none()
+                Command::perform(
+                    async move { open::that(path) },
+                    Message::OpenFileResult
+                )
             }
         },
+
+        Message::OpenFileResult(result) => {
+            match result {
+                Ok(result) => println!("Opened file successfully: {}", result),
+                Err(err) => println!("Error opening file: {}", err),
+            }
+            Command::none()
+        }
 
         // Update resource download status, either marking as complete or error.
         Message::ResourceDownloaded(message) => match message {
