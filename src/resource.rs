@@ -1,6 +1,12 @@
-use fluminurs::file::File;
+use iced::{button, Align, Button, Element, Length, Row, Text};
+
 use fluminurs::resource::Resource as FluminursResource;
-use iced::{button, Button, Element, Row, Text};
+use fluminurs::{
+    conferencing::ZoomRecording,
+    file::File,
+    multimedia::{ExternalVideo, InternalVideo},
+    weblecture::WebLectureVideo,
+};
 
 #[derive(Debug)]
 pub struct ResourceState {
@@ -10,9 +16,21 @@ pub struct ResourceState {
     download_button: button::State,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
+pub enum ResourceType {
+    File,
+    Multimedia,
+    Weblecture,
+    Conference,
+}
+
+#[derive(Debug, Clone)]
 pub enum Resource {
     File(File),
+    InternalVideo(InternalVideo),
+    ExternalVideo(ExternalVideo),
+    WebLectureVideo(WebLectureVideo),
+    ZoomRecording(ZoomRecording),
 }
 
 #[derive(Debug)]
@@ -40,12 +58,18 @@ impl ResourceState {
 
     pub fn resource_path(&self) -> String {
         match &self.resource {
-            Resource::File(file) => file.path().display().to_string(),
+            Resource::File(resource) => resource.path().display().to_string(),
+            Resource::ZoomRecording(resource) => resource.path().display().to_string(),
+            Resource::InternalVideo(resource) => resource.path().display().to_string(),
+            Resource::ExternalVideo(resource) => resource.path().display().to_string(),
+            Resource::WebLectureVideo(resource) => resource.path().display().to_string(),
         }
     }
 
     pub fn view(&mut self) -> Element<ResourceMessage> {
         let content = Row::new()
+            .height(Length::Units(30))
+            .align_items(Align::Center)
             .max_width(800)
             .spacing(20)
             .push(Text::new(self.resource_path()));

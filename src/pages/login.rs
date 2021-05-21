@@ -98,13 +98,13 @@ impl LoginPage {
             )
             .push(username_input.style(style::TextInput::UsernameInput))
             .push(password_input.style(style::TextInput::UsernameInput))
-            .push(Button::new(login_button, Text::new("Login")).on_press(LoginMessage::Submit));
-
-        let content = if *loading {
-            content.push(Text::new("Signing in..."))
-        } else {
-            content
-        };
+            .push(
+                Button::new(
+                    login_button,
+                    Text::new(if *loading { "Signing in…" } else { "Login" }),
+                )
+                .on_press(LoginMessage::Submit),
+            );
 
         let container = Container::new(content)
             .width(Length::Fill)
@@ -162,7 +162,7 @@ mod style {
             Color::BLACK
         }
         fn selection_color(&self) -> Color {
-            Color::BLACK
+            Color::WHITE
         }
     }
 }

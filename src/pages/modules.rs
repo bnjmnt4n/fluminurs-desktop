@@ -1,7 +1,8 @@
 use iced::{scrollable, Column, Command, Container, Element, Length, Scrollable, Text};
 
-use crate::message::Message;
 use fluminurs::module::Module;
+
+use crate::message::Message;
 
 #[derive(Debug, Clone)]
 pub struct ModulesPage {
