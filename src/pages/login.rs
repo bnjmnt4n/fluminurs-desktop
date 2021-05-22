@@ -99,13 +99,20 @@ impl LoginPage {
         .padding(10);
 
         let error_message = match *login_state {
-            LoginState::Error => "Username or Password is incorrect",
+            LoginState::Error => "Username or password is incorrect",
             _ => "",
         };
 
         let button_text = match *login_state {
-            LoginState::SigningIn => "Signing in...",
-            _ => "Login",
+            LoginState::SigningIn => "Signing in…",
+            _ => "Sign in",
+        };
+        let login_button = Button::new(login_button, Text::new(button_text));
+
+        // Disable login button if signing in is in progress
+        let login_button = match *login_state {
+            LoginState::SigningIn => login_button,
+            _ => login_button.on_press(LoginMessage::Submit),
         };
 
         let content = Column::new()
@@ -126,7 +133,7 @@ impl LoginPage {
             }))
             .push(username_input.style(style::TextInput::UsernameInput))
             .push(password_input.style(style::TextInput::UsernameInput))
-            .push(Button::new(login_button, Text::new(button_text)).on_press(LoginMessage::Submit));
+            .push(login_button);
 
         let container = Container::new(content)
             .width(Length::Fill)
