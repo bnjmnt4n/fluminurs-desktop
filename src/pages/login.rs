@@ -1,6 +1,6 @@
 use iced::{
     button, text_input, Align, Button, Column, Command, Container, Element, HorizontalAlignment,
-    Length, Text, TextInput,
+    Length, Text, TextInput, Color,
 };
 
 use crate::api;
@@ -15,6 +15,7 @@ pub struct LoginPage {
     password_input: text_input::State,
     login_button: button::State,
     loading: bool,
+    failed_login: bool
 }
 
 #[derive(Debug, Clone)]
@@ -22,6 +23,7 @@ pub enum LoginMessage {
     UsernameEdited(String),
     PasswordEdited(String),
     Submit,
+    Failed,
 }
 
 impl LoginPage {
@@ -33,6 +35,7 @@ impl LoginPage {
             password_input: text_input::State::new(),
             login_button: button::State::new(),
             loading: false,
+            failed_login: false,
         }
     }
 
@@ -53,6 +56,11 @@ impl LoginPage {
                     Message::LoadedAPI,
                 )
             }
+            LoginMessage::Failed => {
+                self.loading = false;
+                self.failed_login = true;
+                Command::none()
+            }
         }
     }
 
@@ -64,6 +72,7 @@ impl LoginPage {
             password_input,
             login_button,
             loading,
+            failed_login,
         } = self;
 
         // TODO: tab navigation, error handling
@@ -86,6 +95,15 @@ impl LoginPage {
         .on_submit(LoginMessage::Submit)
         .padding(10);
 
+        let error_message = Text::new(
+            if *failed_login {
+                "Username or Password is incorrect"
+            } else {
+                ""
+            }
+        )
+        .color(Color {r: 1.0, g: 0.0, b: 0.0, a: 1.0});
+
         let content = Column::new()
             .align_items(Align::Center)
             .max_width(400)
@@ -96,6 +114,7 @@ impl LoginPage {
                     .width(Length::Fill)
                     .horizontal_alignment(HorizontalAlignment::Center),
             )
+            .push(error_message)
             .push(username_input.style(style::TextInput::UsernameInput))
             .push(password_input.style(style::TextInput::UsernameInput))
             .push(

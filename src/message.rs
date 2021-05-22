@@ -73,7 +73,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 
                 commands
             }
-            Err(_) => Command::none(),
+            Err(_) => state.pages.login.update(LoginMessage::Failed),
         },
 
         // Update loaded resources.
