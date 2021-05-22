@@ -128,10 +128,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             // Open downloaded file.
             // TODO: doesn't work well on Linux.
             ResourceMessage::OpenResource => {
-                Command::perform(
-                    async move { open::that(path) },
-                    Message::OpenFileResult
-                )
+                Command::perform(async move { open::that(path) }, Message::OpenFileResult)
             }
         },
 

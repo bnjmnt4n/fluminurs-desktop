@@ -1,6 +1,6 @@
 use iced::{
-    button, text_input, Align, Button, Column, Command, Container, Element, HorizontalAlignment,
-    Length, Text, TextInput, Color,
+    button, text_input, Align, Button, Color, Column, Command, Container, Element,
+    HorizontalAlignment, Length, Text, TextInput,
 };
 
 use crate::api;
@@ -15,7 +15,7 @@ pub struct LoginPage {
     password_input: text_input::State,
     login_button: button::State,
     loading: bool,
-    failed_login: bool
+    failed_login: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +51,7 @@ impl LoginPage {
             }
             LoginMessage::Submit => {
                 self.loading = true;
+                self.failed_login = false;
                 Command::perform(
                     api::login(clean_username(&self.username), self.password.clone()),
                     Message::LoadedAPI,
@@ -95,14 +96,17 @@ impl LoginPage {
         .on_submit(LoginMessage::Submit)
         .padding(10);
 
-        let error_message = Text::new(
-            if *failed_login {
-                "Username or Password is incorrect"
-            } else {
-                ""
-            }
-        )
-        .color(Color {r: 1.0, g: 0.0, b: 0.0, a: 1.0});
+        let error_message = Text::new(if *failed_login {
+            "Username or Password is incorrect"
+        } else {
+            ""
+        })
+        .color(Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        });
 
         let content = Column::new()
             .align_items(Align::Center)
