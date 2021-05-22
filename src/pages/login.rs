@@ -14,8 +14,7 @@ pub struct LoginPage {
     username_input: text_input::State,
     password_input: text_input::State,
     login_button: button::State,
-    loading: bool,
-    failed_login: bool,
+    login_state: LoginState,
 }
 
 #[derive(Debug, Clone)]
@@ -26,6 +25,13 @@ pub enum LoginMessage {
     Failed,
 }
 
+#[derive(Debug, Clone)]
+pub enum LoginState {
+    Initial,
+    SigningIn,
+    Error,
+}
+
 impl LoginPage {
     pub fn default() -> Self {
         Self {
@@ -34,8 +40,7 @@ impl LoginPage {
             username_input: text_input::State::new(),
             password_input: text_input::State::new(),
             login_button: button::State::new(),
-            loading: false,
-            failed_login: false,
+            login_state: LoginState::Initial,
         }
     }
 
@@ -50,16 +55,14 @@ impl LoginPage {
                 Command::none()
             }
             LoginMessage::Submit => {
-                self.loading = true;
-                self.failed_login = false;
+                self.login_state = LoginState::SigningIn;
                 Command::perform(
                     api::login(clean_username(&self.username), self.password.clone()),
                     Message::LoadedAPI,
                 )
             }
             LoginMessage::Failed => {
-                self.loading = false;
-                self.failed_login = true;
+                self.login_state = LoginState::Error;
                 Command::none()
             }
         }
@@ -72,8 +75,7 @@ impl LoginPage {
             username_input,
             password_input,
             login_button,
-            loading,
-            failed_login,
+            login_state,
         } = self;
 
         // TODO: tab navigation, error handling
@@ -96,17 +98,15 @@ impl LoginPage {
         .on_submit(LoginMessage::Submit)
         .padding(10);
 
-        let error_message = Text::new(if *failed_login {
-            "Username or Password is incorrect"
-        } else {
-            ""
-        })
-        .color(Color {
-            r: 1.0,
-            g: 0.0,
-            b: 0.0,
-            a: 1.0,
-        });
+        let error_message = match *login_state {
+            LoginState::Error => "Username or Password is incorrect",
+            _ => "",
+        };
+
+        let button_text = match *login_state {
+            LoginState::SigningIn => "Signing in...",
+            _ => "Login",
+        };
 
         let content = Column::new()
             .align_items(Align::Center)
@@ -118,16 +118,15 @@ impl LoginPage {
                     .width(Length::Fill)
                     .horizontal_alignment(HorizontalAlignment::Center),
             )
-            .push(error_message)
+            .push(Text::new(error_message).color(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }))
             .push(username_input.style(style::TextInput::UsernameInput))
             .push(password_input.style(style::TextInput::UsernameInput))
-            .push(
-                Button::new(
-                    login_button,
-                    Text::new(if *loading { "Signing in…" } else { "Login" }),
-                )
-                .on_press(LoginMessage::Submit),
-            );
+            .push(Button::new(login_button, Text::new(button_text)).on_press(LoginMessage::Submit));
 
         let container = Container::new(content)
             .width(Length::Fill)
