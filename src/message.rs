@@ -28,7 +28,7 @@ pub enum Message {
     LoadResources(ResourceType),
     LoadedResources((ResourceType, Result<Vec<ResourceState>, Error>)),
     ResourceMessage((ResourceType, String, PathBuf, ResourceMessage)),
-    ResourceDownloaded(Result<(ResourceType, String, PathBuf), Error>),
+    ResourceDownloaded((ResourceType, String, PathBuf, Result<PathBuf, Error>)),
     OpenFileResult(Result<std::process::ExitStatus, std::io::Error>),
 }
 
@@ -161,17 +161,11 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                                                 let result = api::download_resource(
                                                     api,
                                                     resource,
-                                                    resource_type,
                                                     download_path,
-                                                    path,
+                                                    path.clone(),
                                                 )
                                                 .await;
-                                                match result {
-                                                    Ok((resource_type, path)) => {
-                                                        Ok((resource_type, module_id, path))
-                                                    }
-                                                    Err(e) => Err(e),
-                                                }
+                                                (resource_type, module_id, path, result)
                                             },
                                             Message::ResourceDownloaded,
                                         )
@@ -200,24 +194,28 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         }
 
         // Update resource download status, either marking as complete or error.
-        Message::ResourceDownloaded(message) => match message {
-            Ok((resource_type, module_id, path)) => {
-                let resources = get_resources(state, resource_type);
-                resources
-                    .and_then(|files| {
-                        files
-                            .iter_mut()
-                            .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
-                            .map(|file| {
-                                file.download_status = DownloadStatus::Downloaded;
-                                Command::none()
-                            })
-                    })
-                    .unwrap_or_else(|| Command::none())
-            }
-            // TODO: handle error
-            Err(_) => Command::none(),
-        },
+        Message::ResourceDownloaded((resource_type, module_id, path, message)) => {
+            let resources = get_resources(state, resource_type);
+            resources
+                .and_then(|files| {
+                    files
+                        .iter_mut()
+                        .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
+                        .map(|file| {
+                            match message {
+                                Ok(_path) => {
+                                    // TODO: handle renames based on the new path returned.
+                                    file.download_status = DownloadStatus::Downloaded;
+                                }
+                                // TODO: handle error
+                                Err(_) => {}
+                            };
+
+                            Command::none()
+                        })
+                })
+                .unwrap_or_else(|| Command::none())
+        }
     }
 }
 

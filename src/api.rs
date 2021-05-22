@@ -7,7 +7,7 @@ use fluminurs::module::Module;
 use fluminurs::resource::{OverwriteMode, OverwriteResult, Resource as FluminursResource};
 use fluminurs::Api;
 
-use crate::resource::{Resource, ResourceState, ResourceType};
+use crate::resource::{Resource, ResourceState};
 use crate::Error;
 
 pub async fn login(
@@ -270,26 +270,25 @@ fn make_temp_file_name(name: &OsStr) -> OsString {
 pub async fn download_resource(
     api: Api,
     resource: Resource,
-    resource_type: ResourceType,
     download_path: PathBuf,
     path: PathBuf,
     // overwrite_mode: OverwriteMode,
-) -> Result<(ResourceType, PathBuf), Error> {
+) -> Result<PathBuf, Error> {
     match resource {
         Resource::File(resource) => {
-            download_fluminurs_resource(api, resource, resource_type, download_path, path).await
+            download_fluminurs_resource(api, resource, download_path, path).await
         }
         Resource::InternalVideo(resource) => {
-            download_fluminurs_resource(api, resource, resource_type, download_path, path).await
+            download_fluminurs_resource(api, resource, download_path, path).await
         }
         Resource::ExternalVideo(resource) => {
-            download_fluminurs_resource(api, resource, resource_type, download_path, path).await
+            download_fluminurs_resource(api, resource, download_path, path).await
         }
         Resource::WebLectureVideo(resource) => {
-            download_fluminurs_resource(api, resource, resource_type, download_path, path).await
+            download_fluminurs_resource(api, resource, download_path, path).await
         }
         Resource::ZoomRecording(resource) => {
-            download_zoom_recording(api, resource, resource_type, download_path, path).await
+            download_zoom_recording(api, resource, download_path, path).await
         }
     }
 }
@@ -297,11 +296,10 @@ pub async fn download_resource(
 pub async fn download_fluminurs_resource<T: FluminursResource>(
     api: Api,
     file: T,
-    resource_type: ResourceType,
     path: PathBuf,
     return_path: PathBuf,
     // overwrite_mode: OverwriteMode,
-) -> Result<(ResourceType, PathBuf), Error> {
+) -> Result<PathBuf, Error> {
     // TODO: customize destination path
     let dest_path = Path::new(".");
     let temp_path = dest_path
@@ -315,19 +313,19 @@ pub async fn download_fluminurs_resource<T: FluminursResource>(
     {
         Ok(OverwriteResult::NewFile) => {
             println!("Downloaded to {}", path.to_string_lossy());
-            Ok((resource_type, return_path))
+            Ok(return_path)
         }
         Ok(OverwriteResult::AlreadyHave) => {
             println!("File already exists: {}", path.to_string_lossy());
-            Ok((resource_type, return_path))
+            Ok(return_path)
         }
         Ok(OverwriteResult::Skipped) => {
             println!("Skipped {}", path.to_string_lossy());
-            Ok((resource_type, return_path))
+            Ok(return_path)
         }
         Ok(OverwriteResult::Overwritten) => {
             println!("Updated {}", path.to_string_lossy());
-            Ok((resource_type, return_path))
+            Ok(return_path)
         }
         Ok(OverwriteResult::Renamed { renamed_path }) => {
             println!(
@@ -335,7 +333,7 @@ pub async fn download_fluminurs_resource<T: FluminursResource>(
                 path.to_string_lossy(),
                 renamed_path.to_string_lossy()
             );
-            Ok((resource_type, return_path))
+            Ok(return_path)
         }
         Err(e) => {
             println!("Failed to download file: {}", e);
@@ -347,20 +345,19 @@ pub async fn download_fluminurs_resource<T: FluminursResource>(
 pub async fn download_zoom_recording<T: FluminursResource>(
     mut api: Api,
     file: T,
-    resource_type: ResourceType,
     download_path: PathBuf,
     path: PathBuf,
     // overwrite_mode: OverwriteMode,
-) -> Result<(ResourceType, PathBuf), Error> {
+) -> Result<PathBuf, Error> {
     match api.login_zoom().await {
         Err(e) => {
             println!("Failed to log in to Zoom: {}", e);
             // TODO
-            download_fluminurs_resource(api, file, resource_type, download_path, path).await
+            download_fluminurs_resource(api, file, download_path, path).await
         }
         Ok(_) => {
             println!("Logged in to Zoom");
-            download_fluminurs_resource(api, file, resource_type, download_path, path).await
+            download_fluminurs_resource(api, file, download_path, path).await
         }
     }
 }
