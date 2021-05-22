@@ -4,7 +4,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use fluminurs::module::Module;
-use fluminurs::resource::{OverwriteMode, OverwriteResult, Resource as FluminursResource};
+use fluminurs::resource::{sort_and_make_all_paths_unique, OverwriteMode, OverwriteResult, Resource as FluminursResource};
 use fluminurs::Api;
 
 use crate::resource::{Resource, ResourceState};
@@ -58,8 +58,8 @@ pub async fn load_modules_files(
                 .await
                 .map(|mut files| {
                     // to avoid duplicate files from being corrupted,
-                    // we append the id to duplicate files
-                    fluminurs::file::sort_and_make_all_paths_unique(&mut files);
+                    // we append the id to duplicate resources
+                    sort_and_make_all_paths_unique(&mut files);
                     files
                 });
 
@@ -110,7 +110,14 @@ pub async fn load_modules_multimedia(
 
     let (videos, errors) = future::join_all(multimedias.into_iter().map(
         |(module_id, multimedia)| async {
-            let videos = multimedia.load(&api).await;
+            let videos = multimedia.load(&api).await
+                .map(|(mut ivs, mut evs)| {
+                    // to avoid duplicate files from being corrupted,
+                    // we append the id to duplicate resources
+                    sort_and_make_all_paths_unique(&mut ivs);
+                    sort_and_make_all_paths_unique(&mut evs);
+                    (ivs, evs)
+                });
             (module_id, videos)
         },
     ))
@@ -168,7 +175,13 @@ pub async fn load_modules_weblectures(
 
     let (files, errors) = future::join_all(weblectures.into_iter().map(
         |(module_id, weblecture)| async {
-            let weblectures = weblecture.load(&api).await;
+            let weblectures = weblecture.load(&api).await
+                .map(|mut weblectures| {
+                    // to avoid duplicate files from being corrupted,
+                    // we append the id to duplicate resources
+                    sort_and_make_all_paths_unique(&mut weblectures);
+                    weblectures
+                });
             (module_id, weblectures)
         },
     ))
@@ -222,7 +235,13 @@ pub async fn load_modules_conferences(
 
     let (zoom_recordings, errors) = future::join_all(conferences.into_iter().map(
         |(module_id, conference)| async {
-            let recordings = conference.load(&api).await;
+            let recordings = conference.load(&api).await
+                .map(|mut recordings| {
+                    // to avoid duplicate files from being corrupted,
+                    // we append the id to duplicate resources
+                    sort_and_make_all_paths_unique(&mut recordings);
+                    recordings
+                });
             (module_id, recordings)
         },
     ))

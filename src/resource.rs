@@ -91,7 +91,7 @@ impl ResourceState {
             ));
 
         let download_content: Element<_> = match self.download_status {
-            DownloadStatus::Downloading => Text::new("Downloading...").into(),
+            DownloadStatus::Downloading => Text::new("Downloading…").into(),
             DownloadStatus::NotDownloaded => {
                 Button::new(&mut self.download_button, Text::new("Download"))
                     .on_press(ResourceMessage::DownloadResource)

@@ -103,7 +103,7 @@ impl ResourcesPage {
                     ResourceType::Weblecture => "No weblectures found",
                     ResourceType::Conference => "No conferences found",
                 },
-                ResourcesLoadingState::Loading => "Loading...",
+                ResourcesLoadingState::Loading => "Loading…",
                 ResourcesLoadingState::Error => "Failed to fetch resources",
             };
 
@@ -112,7 +112,7 @@ impl ResourcesPage {
 
         let refresh_button: Button<_> = match self.loading_state {
             ResourcesLoadingState::Loading => {
-                Button::new(&mut self.refresh_button, Text::new("Loading"))
+                Button::new(&mut self.refresh_button, Text::new("Loading…"))
             }
             _ => Button::new(&mut self.refresh_button, Text::new("Refresh"))
                 .on_press(ResourcesMessage::Refresh),
