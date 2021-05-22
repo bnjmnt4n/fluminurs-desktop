@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use iced::{executor, Application, Clipboard, Column, Command, Element, Settings};
 
 use fluminurs::{module::Module, Api};
@@ -21,6 +23,7 @@ pub fn main() -> iced::Result {
 pub struct FluminursDesktop {
     api: Option<Api>,
     modules: Option<Vec<Module>>,
+    modules_map: HashMap<String, Module>,
     files: Option<Vec<ResourceState>>,
     multimedia: Option<Vec<ResourceState>>,
     weblectures: Option<Vec<ResourceState>>,
@@ -40,6 +43,7 @@ impl FluminursDesktop {
             api: None,
             name: None,
             modules: None,
+            modules_map: HashMap::new(),
             files: None,
             multimedia: None,
             weblectures: None,
@@ -95,22 +99,22 @@ impl Application for FluminursDesktop {
             Page::Files => self
                 .pages
                 .files
-                .view(&mut self.files)
+                .view(&mut self.files, &self.modules_map)
                 .map(Message::ResourcesPage),
             Page::Multimedia => self
                 .pages
                 .multimedia
-                .view(&mut self.multimedia)
+                .view(&mut self.multimedia, &self.modules_map)
                 .map(Message::ResourcesPage),
             Page::Weblectures => self
                 .pages
                 .weblectures
-                .view(&mut self.weblectures)
+                .view(&mut self.weblectures, &self.modules_map)
                 .map(Message::ResourcesPage),
             Page::Conferences => self
                 .pages
                 .conferences
-                .view(&mut self.conferences)
+                .view(&mut self.conferences, &self.modules_map)
                 .map(Message::ResourcesPage),
         };
 

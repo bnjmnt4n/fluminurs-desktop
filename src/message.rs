@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use iced::Command;
 extern crate open;
 
@@ -24,8 +26,8 @@ pub enum Message {
 
     LoadedAPI(Result<(Api, String, Vec<Module>), Error>),
     LoadedResources(Result<(ResourceType, Vec<ResourceState>), Error>),
-    ResourceMessage((ResourceType, String, ResourceMessage)),
-    ResourceDownloaded(Result<(ResourceType, String), Error>),
+    ResourceMessage((ResourceType, String, PathBuf, ResourceMessage)),
+    ResourceDownloaded(Result<(ResourceType, String, PathBuf), Error>),
     OpenFileResult(Result<std::process::ExitStatus, std::io::Error>),
 }
 
@@ -49,26 +51,31 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             Ok((api, name, modules)) => {
                 let commands = Command::batch(vec![
                     Command::perform(
-                        api::fetch_files(api.clone(), modules.clone()),
+                        api::load_modules_files(api.clone(), modules.clone()),
                         Message::LoadedResources,
                     ),
                     Command::perform(
-                        api::fetch_multimedia(api.clone(), modules.clone()),
+                        api::load_modules_multimedia(api.clone(), modules.clone()),
                         Message::LoadedResources,
                     ),
                     Command::perform(
-                        api::fetch_weblectures(api.clone(), modules.clone()),
+                        api::load_modules_weblectures(api.clone(), modules.clone()),
                         Message::LoadedResources,
                     ),
                     Command::perform(
-                        api::fetch_conferences(api.clone(), modules.clone()),
+                        api::load_modules_conferences(api.clone(), modules.clone()),
                         Message::LoadedResources,
                     ),
                 ]);
 
                 state.name = Some(name);
                 state.api = Some(api);
-                state.modules = Some(modules);
+                state.modules = Some(modules.clone());
+                // TODO: avoid cloning everything
+                state.modules_map = modules
+                    .into_iter()
+                    .map(|item| (item.id.to_string(), item))
+                    .collect();
                 state.current_page = Page::Modules;
 
                 commands
@@ -92,28 +99,45 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         },
 
         // Perform a specific action for a resource.
-        Message::ResourceMessage((resource_type, path, message)) => match message {
+        Message::ResourceMessage((resource_type, module_id, path, message)) => match message {
             ResourceMessage::DownloadResource => {
-                // Note: we clone the API here so it can be passed accross threads to be used
+                // Note: we clone the API here so it can be passed across threads to be used
                 // in an iced Command.
                 let api = state.api.as_ref().cloned();
                 match api {
                     Some(api) => {
+                        let modules_map = state.modules_map.clone();
                         let resources = get_resources(state, resource_type);
                         resources
                             .and_then(|files| {
                                 files
                                     .iter_mut()
-                                    .find(|file| file.resource_path().eq(&path))
+                                    .find(|file| {
+                                        file.path.eq(&path) && file.module_id.eq(&module_id)
+                                    })
                                     .map(|file| {
                                         file.download_status = DownloadStatus::Downloading;
+                                        let resource = file.resource.clone();
+                                        let path = file.path.clone();
+                                        let download_path = file.local_resource_path(&modules_map);
 
                                         Command::perform(
-                                            api::download_resource(
-                                                api,
-                                                file.resource.clone(),
-                                                resource_type,
-                                            ),
+                                            async move {
+                                                match api::download_resource(
+                                                    api,
+                                                    resource,
+                                                    resource_type,
+                                                    download_path,
+                                                    path,
+                                                )
+                                                .await
+                                                {
+                                                    Ok((resource_type, path)) => {
+                                                        Ok((resource_type, module_id, path))
+                                                    }
+                                                    Err(e) => Err(e),
+                                                }
+                                            },
                                             Message::ResourceDownloaded,
                                         )
                                     })
@@ -142,13 +166,13 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 
         // Update resource download status, either marking as complete or error.
         Message::ResourceDownloaded(message) => match message {
-            Ok((resource_type, path)) => {
+            Ok((resource_type, module_id, path)) => {
                 let resources = get_resources(state, resource_type);
                 resources
                     .and_then(|files| {
                         files
                             .iter_mut()
-                            .find(|file| file.resource_path().eq(&path))
+                            .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
                             .map(|file| {
                                 file.download_status = DownloadStatus::Downloaded;
                                 Command::none()
@@ -162,10 +186,10 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
     }
 }
 
-fn get_resources(
-    state: &mut FluminursDesktop,
+fn get_resources<'a>(
+    state: &'a mut FluminursDesktop,
     resource_type: ResourceType,
-) -> Option<&mut Vec<ResourceState>> {
+) -> Option<&'a mut Vec<ResourceState>> {
     match resource_type {
         ResourceType::File => state.files.as_mut(),
         ResourceType::Multimedia => state.multimedia.as_mut(),

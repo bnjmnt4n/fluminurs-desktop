@@ -1,4 +1,9 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 use iced::{scrollable, Column, Command, Container, Element, Length, Scrollable, Text};
+
+use fluminurs::module::Module;
 
 use crate::message::Message;
 use crate::resource::{ResourceMessage, ResourceState, ResourceType};
@@ -11,7 +16,7 @@ pub struct ResourcesPage {
 
 #[derive(Debug, Clone)]
 pub enum ResourcesMessage {
-    ResourceMessage(ResourceType, String, ResourceMessage),
+    ResourceMessage(ResourceType, String, PathBuf, ResourceMessage),
 }
 
 impl ResourcesPage {
@@ -24,27 +29,32 @@ impl ResourcesPage {
 
     pub fn update(message: ResourcesMessage) -> Command<Message> {
         match message {
-            ResourcesMessage::ResourceMessage(resource_type, path, message) => Command::perform(
-                async move { (resource_type, path, message) },
-                Message::ResourceMessage,
-            ),
+            ResourcesMessage::ResourceMessage(resource_type, module_id, path, message) => {
+                Command::perform(
+                    async move { (resource_type, module_id, path, message) },
+                    Message::ResourceMessage,
+                )
+            }
         }
     }
 
     pub fn view<'a>(
         &'a mut self,
         files: &'a mut Option<Vec<ResourceState>>,
+        modules_map: &'a HashMap<String, Module>,
     ) -> Element<'a, ResourcesMessage> {
         let files: Element<_> = if let Some(ref mut files) = files {
             files
                 .iter_mut()
                 .fold(Column::new().spacing(20), |column, file| {
                     // TODO: figure out Rust move semantics here
-                    let resource_type = self.resource_type.clone();
-                    let resource_path = file.resource_path().clone();
-                    column.push(file.view().map(move |message| {
+                    let resource_type = self.resource_type;
+                    let resource_module_id = file.module_id.clone();
+                    let resource_path = file.path.clone();
+                    column.push(file.view(modules_map).map(move |message| {
                         ResourcesMessage::ResourceMessage(
-                            resource_type.clone(),
+                            resource_type,
+                            resource_module_id.clone(),
                             resource_path.clone(),
                             message,
                         )

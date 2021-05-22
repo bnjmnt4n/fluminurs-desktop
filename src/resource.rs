@@ -1,5 +1,9 @@
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
 use iced::{button, Align, Button, Element, Length, Row, Text};
 
+use fluminurs::module::Module;
 use fluminurs::resource::Resource as FluminursResource;
 use fluminurs::{
     conferencing::ZoomRecording,
@@ -10,6 +14,9 @@ use fluminurs::{
 
 #[derive(Debug)]
 pub struct ResourceState {
+    pub module_id: String,
+    pub path: PathBuf,
+
     pub resource: Resource,
     pub download_status: DownloadStatus,
     open_button: button::State,
@@ -47,8 +54,10 @@ pub enum ResourceMessage {
 }
 
 impl ResourceState {
-    pub fn new(resource: Resource) -> Self {
-        Self {
+    pub fn new(resource: Resource, module_id: String) -> Self {
+        ResourceState {
+            module_id,
+            path: get_resource_path(&resource),
             resource,
             download_status: DownloadStatus::NotDownloaded,
             open_button: button::State::new(),
@@ -56,23 +65,30 @@ impl ResourceState {
         }
     }
 
-    pub fn resource_path(&self) -> String {
-        match &self.resource {
-            Resource::File(resource) => resource.path().display().to_string(),
-            Resource::ZoomRecording(resource) => resource.path().display().to_string(),
-            Resource::InternalVideo(resource) => resource.path().display().to_string(),
-            Resource::ExternalVideo(resource) => resource.path().display().to_string(),
-            Resource::WebLectureVideo(resource) => resource.path().display().to_string(),
-        }
+    pub fn local_resource_path(&self, modules_map: &HashMap<String, Module>) -> PathBuf {
+        Path::new(match modules_map.get(&self.module_id) {
+            Some(module) => module.code.as_ref(),
+            None => "Unknown",
+        })
+        .join(Path::new(match &self.resource {
+            Resource::File(_) => "Files",
+            Resource::InternalVideo(_) => "Multimedia",
+            Resource::ExternalVideo(_) => "Multimedia",
+            Resource::WebLectureVideo(_) => "Weblectures",
+            Resource::ZoomRecording(_) => "Conferences",
+        }))
+        .join(self.path.clone())
     }
 
-    pub fn view(&mut self) -> Element<ResourceMessage> {
+    pub fn view(&mut self, modules_map: &HashMap<String, Module>) -> Element<ResourceMessage> {
         let content = Row::new()
             .height(Length::Units(30))
             .align_items(Align::Center)
             .max_width(800)
             .spacing(20)
-            .push(Text::new(self.resource_path()));
+            .push(Text::new(
+                self.local_resource_path(modules_map).display().to_string(),
+            ));
 
         let download_content: Element<_> = match self.download_status {
             DownloadStatus::Downloading => Text::new("Downloading...").into(),
@@ -87,5 +103,15 @@ impl ResourceState {
         };
 
         content.push(download_content).into()
+    }
+}
+
+fn get_resource_path(resource: &Resource) -> PathBuf {
+    match &resource {
+        Resource::File(resource) => resource.path().to_path_buf(),
+        Resource::ZoomRecording(resource) => resource.path().to_path_buf(),
+        Resource::InternalVideo(resource) => resource.path().to_path_buf(),
+        Resource::ExternalVideo(resource) => resource.path().to_path_buf(),
+        Resource::WebLectureVideo(resource) => resource.path().to_path_buf(),
     }
 }
