@@ -13,7 +13,7 @@ use crate::Error;
 pub async fn login(
     username: String,
     password: String,
-) -> Result<(Api, String, Vec<Module>), Error> {
+) -> Result<(Api, String, String, String, Vec<Module>), Error> {
     let api = Api::with_login(&username, &password)
         .await
         .map_err(|_| Error {})?
@@ -28,7 +28,7 @@ pub async fn login(
         .await
         .map_err(|_| Error {})?;
 
-    Ok((api, name, modules))
+    Ok((api, username, password, name, modules))
 }
 
 // TODO: reduce code duplication with fluminurs

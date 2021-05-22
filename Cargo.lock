@@ -802,6 +802,9 @@ dependencies = [
  "futures-util",
  "iced",
  "open",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

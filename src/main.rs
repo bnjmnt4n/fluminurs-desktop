@@ -9,13 +9,14 @@ mod header;
 mod message;
 mod pages;
 mod resource;
+mod settings;
 mod utils;
 
 use crate::header::Header;
 use crate::message::{handle_message, Message};
 use crate::pages::{Page, Pages};
-use crate::resource::ResourceState;
-use crate::resource::ResourceType;
+use crate::resource::{ResourceState, ResourceType};
+use crate::settings::Settings as FluminursDesktopSettings;
 
 pub fn main() -> iced::Result {
     FluminursDesktop::run(Settings::default())
@@ -23,6 +24,7 @@ pub fn main() -> iced::Result {
 
 pub struct FluminursDesktop {
     api: Option<Api>,
+    settings: FluminursDesktopSettings,
     modules: Option<Vec<Module>>,
     modules_map: HashMap<String, Module>,
     files: Option<Vec<ResourceState>>,
@@ -39,9 +41,10 @@ pub struct FluminursDesktop {
 pub struct Error;
 
 impl FluminursDesktop {
-    fn default() -> FluminursDesktop {
+    fn default() -> Self {
         FluminursDesktop {
             api: None,
+            settings: FluminursDesktopSettings::default(),
             name: None,
             modules: None,
             modules_map: HashMap::new(),
@@ -62,7 +65,10 @@ impl Application for FluminursDesktop {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        (Self::default(), Command::none())
+        (Self::default(), Command::perform(
+            FluminursDesktopSettings::load(),
+            Message::SettingsLoaded
+        ))
     }
 
     fn title(&self) -> String {

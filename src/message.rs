@@ -13,6 +13,7 @@ use crate::pages::modules::ModulesMessage;
 use crate::pages::resources::{ResourcesMessage, ResourcesPage};
 use crate::pages::Page;
 use crate::resource::{DownloadStatus, ResourceMessage, ResourceState, ResourceType};
+use crate::settings::Settings;
 use crate::Error;
 use crate::FluminursDesktop;
 
@@ -24,7 +25,9 @@ pub enum Message {
     Header(HeaderMessage),
     SwitchPage(Page),
 
-    LoadedAPI(Result<(Api, String, Vec<Module>), Error>),
+    SettingsLoaded(Result<Settings, Error>),
+    SettingsSaved(Result<(), Error>),
+    LoadedAPI(Result<(Api, String, String, String, Vec<Module>), Error>),
     LoadResources(ResourceType),
     LoadedResources((ResourceType, Result<Vec<ResourceState>, Error>)),
     ResourceMessage((ResourceType, String, PathBuf, ResourceMessage)),
@@ -49,9 +52,37 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             Command::none()
         }
 
+        Message::SettingsLoaded(message) => match message {
+            Ok(settings) => {
+                state.settings = settings;
+
+                if let Some(username) = state.settings.get_username() {
+                    state.pages.login.update(LoginMessage::UsernameEdited(username.to_string()));
+                }
+                if let Some(password) = state.settings.get_password() {
+                    state.pages.login.update(LoginMessage::PasswordEdited(password.to_string()));
+                }
+
+                Command::none()
+            }
+            // TODO
+            Err(_) => Command::none()
+        }
+        Message::SettingsSaved(message) => match message {
+            Ok(()) => {
+                println!("Saved settings");
+                Command::none()
+            }
+            // TODO
+            Err(_) => {
+                println!("Failed to save settings");
+                Command::none()
+            }
+        }
+
         // After we've successfully logged in, fetch all resources.
         Message::LoadedAPI(result) => match result {
-            Ok((api, name, modules)) => {
+            Ok((api, username, password, name, modules)) => {
                 state.name = Some(name);
                 state.api = Some(api);
                 state.modules = Some(modules.clone());
@@ -62,7 +93,10 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                     .collect();
                 state.current_page = Page::Modules;
 
+                state.settings.set_login_details(username, password);
+
                 Command::batch(vec![
+                    Command::perform(state.settings.clone().save(), Message::SettingsSaved),
                     Command::perform(async { ResourceType::File }, Message::LoadResources),
                     Command::perform(async { ResourceType::Multimedia }, Message::LoadResources),
                     Command::perform(async { ResourceType::Weblecture }, Message::LoadResources),

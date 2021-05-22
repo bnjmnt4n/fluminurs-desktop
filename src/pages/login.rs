@@ -34,7 +34,7 @@ pub enum LoginState {
 
 impl LoginPage {
     pub fn default() -> Self {
-        Self {
+        LoginPage {
             username: "".to_string(),
             password: "".to_string(),
             username_input: text_input::State::new(),
@@ -50,8 +50,8 @@ impl LoginPage {
                 self.username = username;
                 Command::none()
             }
-            LoginMessage::PasswordEdited(string) => {
-                self.password = string;
+            LoginMessage::PasswordEdited(password) => {
+                self.password = password;
                 Command::none()
             }
             LoginMessage::Submit => {
