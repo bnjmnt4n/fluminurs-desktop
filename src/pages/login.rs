@@ -1,6 +1,6 @@
 use iced::{
-    button, text_input, Align, Button, Column, Command, Container, Element, HorizontalAlignment,
-    Length, Text, TextInput,
+    button, text_input, Align, Button, Color, Column, Command, Container, Element,
+    HorizontalAlignment, Length, Text, TextInput,
 };
 
 use crate::api;
@@ -14,7 +14,7 @@ pub struct LoginPage {
     username_input: text_input::State,
     password_input: text_input::State,
     login_button: button::State,
-    loading: bool,
+    login_state: LoginState,
 }
 
 #[derive(Debug, Clone)]
@@ -22,6 +22,14 @@ pub enum LoginMessage {
     UsernameEdited(String),
     PasswordEdited(String),
     Submit,
+    Failed,
+}
+
+#[derive(Debug, Clone)]
+pub enum LoginState {
+    Initial,
+    SigningIn,
+    Error,
 }
 
 impl LoginPage {
@@ -32,7 +40,7 @@ impl LoginPage {
             username_input: text_input::State::new(),
             password_input: text_input::State::new(),
             login_button: button::State::new(),
-            loading: false,
+            login_state: LoginState::Initial,
         }
     }
 
@@ -47,11 +55,15 @@ impl LoginPage {
                 Command::none()
             }
             LoginMessage::Submit => {
-                self.loading = true;
+                self.login_state = LoginState::SigningIn;
                 Command::perform(
                     api::login(clean_username(&self.username), self.password.clone()),
                     Message::LoadedAPI,
                 )
+            }
+            LoginMessage::Failed => {
+                self.login_state = LoginState::Error;
+                Command::none()
             }
         }
     }
@@ -63,7 +75,7 @@ impl LoginPage {
             username_input,
             password_input,
             login_button,
-            loading,
+            login_state,
         } = self;
 
         // TODO: tab navigation, error handling
@@ -86,6 +98,23 @@ impl LoginPage {
         .on_submit(LoginMessage::Submit)
         .padding(10);
 
+        let error_message = match *login_state {
+            LoginState::Error => "Username or password is incorrect",
+            _ => "",
+        };
+
+        let button_text = match *login_state {
+            LoginState::SigningIn => "Signing in…",
+            _ => "Sign in",
+        };
+        let login_button = Button::new(login_button, Text::new(button_text));
+
+        // Disable login button if signing in is in progress
+        let login_button = match *login_state {
+            LoginState::SigningIn => login_button,
+            _ => login_button.on_press(LoginMessage::Submit),
+        };
+
         let content = Column::new()
             .align_items(Align::Center)
             .max_width(400)
@@ -96,15 +125,15 @@ impl LoginPage {
                     .width(Length::Fill)
                     .horizontal_alignment(HorizontalAlignment::Center),
             )
+            .push(Text::new(error_message).color(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }))
             .push(username_input.style(style::TextInput::UsernameInput))
             .push(password_input.style(style::TextInput::UsernameInput))
-            .push(
-                Button::new(
-                    login_button,
-                    Text::new(if *loading { "Signing in…" } else { "Login" }),
-                )
-                .on_press(LoginMessage::Submit),
-            );
+            .push(login_button);
 
         let container = Container::new(content)
             .width(Length::Fill)

@@ -773,7 +773,7 @@ checksum = "7bad48618fdb549078c333a7a8528acb57af271d0433bdecd523eb620628364e"
 [[package]]
 name = "fluminurs"
 version = "1.2.0"
-source = "git+https://github.com/bnjmnt4n/fluminurs?branch=desktop#8e43ab2986d6f7efd5dd5ceb8933251fd88ef00f"
+source = "git+https://github.com/bnjmnt4n/fluminurs?branch=desktop#cfe6740a67c485a8dd829ed7268b62debf5ce548"
 dependencies = [
  "ammonia",
  "async-trait",
@@ -801,6 +801,7 @@ dependencies = [
  "fluminurs",
  "futures-util",
  "iced",
+ "open",
 ]
 
 [[package]]
@@ -2140,6 +2141,16 @@ name = "once_cell"
 version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af8b08b04175473088b46763e51ee54da5f9a164bc162f615b91bc179dbf15a3"
+
+[[package]]
+name = "open"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1711eb4b31ce4ad35b0f316d8dfba4fe5c7ad601c448446d84aae7a896627b20"
+dependencies = [
+ "which",
+ "winapi 0.3.9",
+]
 
 [[package]]
 name = "openssl"
@@ -3650,6 +3661,16 @@ dependencies = [
  "glyph_brush",
  "log",
  "wgpu",
+]
+
+[[package]]
+name = "which"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b55551e42cbdf2ce2bedd2203d0cc08dba002c27510f86dab6d0ce304cba3dfe"
+dependencies = [
+ "either",
+ "libc",
 ]
 
 [[package]]

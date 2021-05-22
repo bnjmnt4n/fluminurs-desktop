@@ -1,4 +1,5 @@
 use iced::Command;
+extern crate open;
 
 use fluminurs::module::Module;
 use fluminurs::Api;
@@ -25,6 +26,7 @@ pub enum Message {
     LoadedResources(Result<(ResourceType, Vec<ResourceState>), Error>),
     ResourceMessage((ResourceType, String, ResourceMessage)),
     ResourceDownloaded(Result<(ResourceType, String), Error>),
+    OpenFileResult(Result<std::process::ExitStatus, std::io::Error>),
 }
 
 pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command<Message> {
@@ -71,7 +73,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 
                 commands
             }
-            Err(_) => Command::none(),
+            Err(_) => state.pages.login.update(LoginMessage::Failed),
         },
 
         // Update loaded resources.
@@ -122,9 +124,21 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                     None => Command::none(),
                 }
             }
-            // TODO: open downloaded file
-            ResourceMessage::OpenResource => Command::none(),
+
+            // Open downloaded file.
+            // TODO: doesn't work well on Linux.
+            ResourceMessage::OpenResource => {
+                Command::perform(async move { open::that(path) }, Message::OpenFileResult)
+            }
         },
+
+        Message::OpenFileResult(result) => {
+            match result {
+                Ok(result) => println!("Opened file successfully: {}", result),
+                Err(err) => println!("Error opening file: {}", err),
+            }
+            Command::none()
+        }
 
         // Update resource download status, either marking as complete or error.
         Message::ResourceDownloaded(message) => match message {
