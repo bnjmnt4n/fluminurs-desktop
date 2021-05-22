@@ -15,6 +15,7 @@ use crate::header::Header;
 use crate::message::{handle_message, Message};
 use crate::pages::{Page, Pages};
 use crate::resource::ResourceState;
+use crate::resource::ResourceType;
 
 pub fn main() -> iced::Result {
     FluminursDesktop::run(Settings::default())
@@ -100,22 +101,22 @@ impl Application for FluminursDesktop {
                 .pages
                 .files
                 .view(&mut self.files, &self.modules_map)
-                .map(Message::ResourcesPage),
+                .map(|message| Message::ResourcesPage((ResourceType::File, message))),
             Page::Multimedia => self
                 .pages
                 .multimedia
                 .view(&mut self.multimedia, &self.modules_map)
-                .map(Message::ResourcesPage),
+                .map(|message| Message::ResourcesPage((ResourceType::Multimedia, message))),
             Page::Weblectures => self
                 .pages
                 .weblectures
                 .view(&mut self.weblectures, &self.modules_map)
-                .map(Message::ResourcesPage),
+                .map(|message| Message::ResourcesPage((ResourceType::Weblecture, message))),
             Page::Conferences => self
                 .pages
                 .conferences
                 .view(&mut self.conferences, &self.modules_map)
-                .map(Message::ResourcesPage),
+                .map(|message| Message::ResourcesPage((ResourceType::Conference, message))),
         };
 
         if display_header {

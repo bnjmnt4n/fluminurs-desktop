@@ -36,7 +36,7 @@ pub async fn login(
 pub async fn load_modules_files(
     api: Api,
     modules: Vec<Module>,
-) -> Result<(ResourceType, Vec<ResourceState>), Error> {
+) -> Result<Vec<ResourceState>, Error> {
     let include_uploadable_folders = true;
 
     let root_dirs = modules
@@ -90,13 +90,13 @@ pub async fn load_modules_files(
     for (module_id, e) in errors {
         println!("Failed loading module files: {} {}", module_id, e);
     }
-    Ok((ResourceType::File, files))
+    Ok(files)
 }
 
 pub async fn load_modules_multimedia(
     api: Api,
     modules: Vec<Module>,
-) -> Result<(ResourceType, Vec<ResourceState>), Error> {
+) -> Result<Vec<ResourceState>, Error> {
     let multimedias = modules
         .iter()
         .filter(|module| module.has_access())
@@ -148,13 +148,13 @@ pub async fn load_modules_multimedia(
         println!("Failed loading module multimedia: {} {}", module_id, e);
     }
 
-    Ok((ResourceType::Multimedia, videos))
+    Ok(videos)
 }
 
 pub async fn load_modules_weblectures(
     api: Api,
     modules: Vec<Module>,
-) -> Result<(ResourceType, Vec<ResourceState>), Error> {
+) -> Result<Vec<ResourceState>, Error> {
     let weblectures = modules
         .iter()
         .filter(|module| module.has_access())
@@ -202,13 +202,13 @@ pub async fn load_modules_weblectures(
         println!("Failed loading module web lecture: {} {}", module_id, e);
     }
 
-    Ok((ResourceType::Weblecture, files))
+    Ok(files)
 }
 
 pub async fn load_modules_conferences(
     api: Api,
     modules: Vec<Module>,
-) -> Result<(ResourceType, Vec<ResourceState>), Error> {
+) -> Result<Vec<ResourceState>, Error> {
     let conferences = modules
         .iter()
         .filter(|module| module.has_access())
@@ -256,7 +256,7 @@ pub async fn load_modules_conferences(
         println!("Failed loading module conferences: {} {}", module_id, e);
     }
 
-    Ok((ResourceType::Conference, zoom_recordings))
+    Ok(zoom_recordings)
 }
 
 fn make_temp_file_name(name: &OsStr) -> OsString {

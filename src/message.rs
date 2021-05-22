@@ -20,12 +20,13 @@ use crate::FluminursDesktop;
 pub enum Message {
     LoginPage(LoginMessage),
     ModulesPage(ModulesMessage),
-    ResourcesPage(ResourcesMessage),
+    ResourcesPage((ResourceType, ResourcesMessage)),
     Header(HeaderMessage),
     SwitchPage(Page),
 
     LoadedAPI(Result<(Api, String, Vec<Module>), Error>),
-    LoadedResources(Result<(ResourceType, Vec<ResourceState>), Error>),
+    LoadResources(ResourceType),
+    LoadedResources((ResourceType, Result<Vec<ResourceState>, Error>)),
     ResourceMessage((ResourceType, String, PathBuf, ResourceMessage)),
     ResourceDownloaded(Result<(ResourceType, String, PathBuf), Error>),
     OpenFileResult(Result<std::process::ExitStatus, std::io::Error>),
@@ -37,7 +38,9 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         // be handled by each individual page/component.
         Message::LoginPage(message) => state.pages.login.update(message),
         Message::ModulesPage(message) => state.pages.modules.update(message),
-        Message::ResourcesPage(message) => ResourcesPage::update(message),
+        Message::ResourcesPage((resource_type, message)) => {
+            get_resources_page(state, resource_type).update(message)
+        }
         Message::Header(message) => state.header.update(message),
 
         // Switch the current active page.
@@ -49,25 +52,6 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         // After we've successfully logged in, fetch all resources.
         Message::LoadedAPI(result) => match result {
             Ok((api, name, modules)) => {
-                let commands = Command::batch(vec![
-                    Command::perform(
-                        api::load_modules_files(api.clone(), modules.clone()),
-                        Message::LoadedResources,
-                    ),
-                    Command::perform(
-                        api::load_modules_multimedia(api.clone(), modules.clone()),
-                        Message::LoadedResources,
-                    ),
-                    Command::perform(
-                        api::load_modules_weblectures(api.clone(), modules.clone()),
-                        Message::LoadedResources,
-                    ),
-                    Command::perform(
-                        api::load_modules_conferences(api.clone(), modules.clone()),
-                        Message::LoadedResources,
-                    ),
-                ]);
-
                 state.name = Some(name);
                 state.api = Some(api);
                 state.modules = Some(modules.clone());
@@ -78,14 +62,58 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                     .collect();
                 state.current_page = Page::Modules;
 
-                commands
+                Command::batch(vec![
+                    Command::perform(async { ResourceType::File }, Message::LoadResources),
+                    Command::perform(async { ResourceType::Multimedia }, Message::LoadResources),
+                    Command::perform(async { ResourceType::Weblecture }, Message::LoadResources),
+                    Command::perform(async { ResourceType::Conference }, Message::LoadResources),
+                ])
             }
             Err(_) => state.pages.login.update(LoginMessage::Failed),
         },
 
+        // Load resources.
+        Message::LoadResources(resource_type) => {
+            match state.api.as_ref().cloned() {
+                Some(api) => match state.modules.as_ref().cloned() {
+                    Some(modules) => Command::batch(vec![
+                        Command::perform(
+                            async move { (resource_type, ResourcesMessage::RefreshInProgress) },
+                            Message::ResourcesPage,
+                        ),
+                        Command::perform(
+                            async move {
+                                let result = match resource_type {
+                                    ResourceType::File => {
+                                        api::load_modules_files(api, modules).await
+                                    }
+                                    ResourceType::Multimedia => {
+                                        api::load_modules_multimedia(api, modules).await
+                                    }
+                                    ResourceType::Weblecture => {
+                                        api::load_modules_weblectures(api, modules).await
+                                    }
+                                    ResourceType::Conference => {
+                                        api::load_modules_conferences(api, modules).await
+                                    }
+                                };
+
+                                (resource_type, result)
+                            },
+                            Message::LoadedResources,
+                        ),
+                    ]),
+                    // TODO: refetch modules?
+                    None => Command::none(),
+                },
+                // TODO: refresh API?
+                None => Command::none(),
+            }
+        }
+
         // Update loaded resources.
-        Message::LoadedResources(result) => match result {
-            Ok((resource_type, resources)) => {
+        Message::LoadedResources((resource_type, result)) => match result {
+            Ok(resources) => {
                 match resource_type {
                     ResourceType::File => state.files = Some(resources),
                     ResourceType::Multimedia => state.multimedia = Some(resources),
@@ -93,9 +121,16 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                     ResourceType::Conference => state.conferences = Some(resources),
                 };
 
-                Command::none()
+                Command::perform(
+                    async move { (resource_type, ResourcesMessage::RefreshSuccessful) },
+                    Message::ResourcesPage,
+                )
             }
-            Err(_) => Command::none(),
+            // TODO
+            Err(_) => Command::perform(
+                async move { (resource_type, ResourcesMessage::RefreshFailed) },
+                Message::ResourcesPage,
+            ),
         },
 
         // Perform a specific action for a resource.
@@ -123,15 +158,15 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 
                                         Command::perform(
                                             async move {
-                                                match api::download_resource(
+                                                let result = api::download_resource(
                                                     api,
                                                     resource,
                                                     resource_type,
                                                     download_path,
                                                     path,
                                                 )
-                                                .await
-                                                {
+                                                .await;
+                                                match result {
                                                     Ok((resource_type, path)) => {
                                                         Ok((resource_type, module_id, path))
                                                     }
@@ -195,5 +230,17 @@ fn get_resources<'a>(
         ResourceType::Multimedia => state.multimedia.as_mut(),
         ResourceType::Weblecture => state.weblectures.as_mut(),
         ResourceType::Conference => state.conferences.as_mut(),
+    }
+}
+
+fn get_resources_page(
+    state: &mut FluminursDesktop,
+    resource_type: ResourceType,
+) -> &mut ResourcesPage {
+    match resource_type {
+        ResourceType::File => &mut state.pages.files,
+        ResourceType::Multimedia => &mut state.pages.multimedia,
+        ResourceType::Weblecture => &mut state.pages.weblectures,
+        ResourceType::Conference => &mut state.pages.conferences,
     }
 }
