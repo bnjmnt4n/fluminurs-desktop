@@ -15,6 +15,7 @@ use crate::pages::resources::{ResourcesMessage, ResourcesPage};
 use crate::pages::Page;
 use crate::resource::{DownloadStatus, ResourceMessage, ResourceState, ResourceType};
 use crate::settings::Settings;
+use crate::utils::{construct_modules_map, merge_modules, merge_resources};
 use crate::Error;
 use crate::FluminursDesktop;
 
@@ -97,13 +98,8 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             Ok((api, username, password, name, modules)) => {
                 state.name = Some(name);
                 state.api = Some(api);
-                // TODO: avoid cloning everything
-                state.modules_map = modules
-                    .items
-                    .iter()
-                    .map(|item| (item.id.to_string(), item.clone()))
-                    .collect();
-                state.data.modules = modules;
+                merge_modules(&mut state.data.modules, modules);
+                state.modules_map = construct_modules_map(&state.data.modules.items);
                 state.current_page = Page::Modules;
 
                 state.settings.set_login_details(username, password);
@@ -143,7 +139,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         // Update loaded modules.
         Message::LoadedModules(result) => match result {
             Ok(modules) => {
-                state.data.modules = modules;
+                merge_modules(&mut state.data.modules, modules);
 
                 Command::none()
             }
@@ -209,12 +205,14 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         // Update loaded resources.
         Message::LoadedResources((resource_type, result)) => match result {
             Ok(resources) => {
-                match resource_type {
-                    ResourceType::File => state.data.files = resources,
-                    ResourceType::Multimedia => state.data.multimedia = resources,
-                    ResourceType::Weblecture => state.data.weblectures = resources,
-                    ResourceType::Conference => state.data.conferences = resources,
-                }
+                let curr_resources = match resource_type {
+                    ResourceType::File => &mut state.data.files,
+                    ResourceType::Multimedia => &mut state.data.multimedia,
+                    ResourceType::Weblecture => &mut state.data.weblectures,
+                    ResourceType::Conference => &mut state.data.conferences,
+                };
+
+                merge_resources(curr_resources, resources);
 
                 Command::none()
             }
@@ -236,7 +234,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 match api {
                     Some(api) => {
                         let modules_map = state.modules_map.clone();
-                        let resources = get_resources(state, resource_type);
+                        let resources = get_resources_items(state, resource_type);
                         resources
                             .iter_mut()
                             .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
@@ -289,7 +287,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 
         // Update resource download status, either marking as complete or error.
         Message::ResourceDownloaded((resource_type, module_id, path, message)) => {
-            let resources = get_resources(state, resource_type);
+            let resources = get_resources_items(state, resource_type);
             resources
                 .iter_mut()
                 .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
@@ -310,7 +308,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
     }
 }
 
-fn get_resources<'a>(
+fn get_resources_items<'a>(
     state: &'a mut FluminursDesktop,
     resource_type: ResourceType,
 ) -> &'a mut Vec<ResourceState> {
