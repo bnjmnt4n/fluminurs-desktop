@@ -1,4 +1,6 @@
-use iced::{button, Button, Command, Element, Row, Text};
+use iced::{
+    button, Button, Column, Command, Element, Length, Row, Rule, Space, Text, VerticalAlignment,
+};
 
 use crate::message::Message;
 use crate::pages::Page;
@@ -36,38 +38,118 @@ impl Header {
         }
     }
 
-    pub fn view(&mut self, name: &Option<String>) -> Element<HeaderMessage> {
-        // TODO: different styles for active module
+    pub fn view(&mut self, name: &Option<String>, active_page: &Page) -> Element<HeaderMessage> {
         let content = Row::new()
             .max_width(800)
-            .spacing(20)
-            .push(
-                Button::new(&mut self.modules_button, Text::new("Modules"))
-                    .on_press(HeaderMessage::SwitchPage(Page::Modules)),
-            )
-            .push(
-                Button::new(&mut self.files_button, Text::new("Files"))
-                    .on_press(HeaderMessage::SwitchPage(Page::Files)),
-            )
-            .push(
-                Button::new(&mut self.multimedia_button, Text::new("Multimedia"))
-                    .on_press(HeaderMessage::SwitchPage(Page::Multimedia)),
-            )
-            .push(
-                Button::new(&mut self.weblectures_button, Text::new("Weblectures"))
-                    .on_press(HeaderMessage::SwitchPage(Page::Weblectures)),
-            )
-            .push(
-                Button::new(&mut self.conferences_button, Text::new("Conferences"))
-                    .on_press(HeaderMessage::SwitchPage(Page::Conferences)),
-            );
+            .push(create_button(
+                &mut self.modules_button,
+                Page::Modules,
+                "Modules",
+                active_page,
+            ))
+            .push(create_button(
+                &mut self.files_button,
+                Page::Files,
+                "Files",
+                active_page,
+            ))
+            .push(create_button(
+                &mut self.multimedia_button,
+                Page::Multimedia,
+                "Multimedia",
+                active_page,
+            ))
+            .push(create_button(
+                &mut self.weblectures_button,
+                Page::Weblectures,
+                "Weblectures",
+                active_page,
+            ))
+            .push(create_button(
+                &mut self.conferences_button,
+                Page::Conferences,
+                "Conferences",
+                active_page,
+            ));
 
         let content = if let Some(name) = name {
-            content.push(Text::new(name))
+            content
+                .push(Space::with_width(Length::FillPortion(7)))
+                .push(
+                    Text::new(name)
+                        .vertical_alignment(VerticalAlignment::Bottom)
+                        .height(Length::Units(25)),
+                )
         } else {
             content
         };
 
-        content.into()
+        Column::new()
+            .push(content)
+            .push(Rule::horizontal(0).style(style::Divider::Header))
+            .into()
+    }
+}
+
+fn create_button<'a, 'b>(
+    button_state: &'a mut button::State,
+    page: Page,
+    page_name: &'static str,
+    active_page: &'b Page,
+) -> Button<'a, HeaderMessage> {
+    Button::new(button_state, Text::new(page_name))
+        .style(get_button_style(active_page, &page))
+        .on_press(HeaderMessage::SwitchPage(page))
+}
+
+fn get_button_style(active_page: &Page, current_module: &Page) -> style::Button {
+    if active_page == current_module {
+        style::Button::ActiveButton
+    } else {
+        style::Button::InactiveButton
+    }
+}
+
+mod style {
+    use iced::{button, rule, Background, Color};
+
+    pub enum Button {
+        ActiveButton,
+        InactiveButton,
+    }
+
+    pub enum Divider {
+        Header,
+    }
+
+    impl button::StyleSheet for Button {
+        fn active(&self) -> button::Style {
+            match self {
+                Button::ActiveButton => button::Style {
+                    background: Option::Some(Background::Color(Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 0.545,
+                        a: 1.0,
+                    })),
+                    border_radius: 0.0,
+                    border_width: 0.0,
+                    text_color: Color::WHITE,
+                    ..button::Style::default()
+                },
+                Button::InactiveButton => button::Style::default(),
+            }
+        }
+    }
+
+    impl rule::StyleSheet for Divider {
+        fn style(&self) -> rule::Style {
+            rule::Style {
+                fill_mode: rule::FillMode::Full,
+                color: Color::BLACK,
+                width: 1,
+                radius: 1.0,
+            }
+        }
     }
 }

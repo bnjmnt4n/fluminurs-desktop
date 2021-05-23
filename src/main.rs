@@ -128,7 +128,10 @@ impl Application for FluminursDesktop {
         };
 
         if display_header {
-            let header = self.header.view(&self.name).map(Message::Header);
+            let header = self
+                .header
+                .view(&self.name, &self.current_page)
+                .map(Message::Header);
 
             Column::new()
                 .max_width(800)
