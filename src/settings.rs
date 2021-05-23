@@ -44,7 +44,9 @@ impl Settings {
     }
 
     pub async fn load() -> Result<Settings, Error> {
-        let contents = tokio::fs::read_to_string(Self::path()).await.map_err(|_| Error {})?;
+        let contents = tokio::fs::read_to_string(Self::path())
+            .await
+            .map_err(|_| Error {})?;
 
         if let Ok(settings) = serde_json::from_str::<Settings>(&contents) {
             println!("Read settings");
@@ -59,8 +61,7 @@ impl Settings {
     }
 
     pub async fn save(self) -> Result<(), Error> {
-        let json = serde_json::to_string_pretty(&self)
-            .map_err(|_| Error {})?;
+        let json = serde_json::to_string_pretty(&self).map_err(|_| Error {})?;
 
         let path = Self::path();
 

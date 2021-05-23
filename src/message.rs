@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
 use iced::Command;
-extern crate open;
 
 use fluminurs::module::Module;
 use fluminurs::Api;
@@ -57,17 +56,23 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 state.settings = settings;
 
                 if let Some(username) = state.settings.get_username() {
-                    state.pages.login.update(LoginMessage::UsernameEdited(username.to_string()));
+                    state
+                        .pages
+                        .login
+                        .update(LoginMessage::UsernameEdited(username.to_string()));
                 }
                 if let Some(password) = state.settings.get_password() {
-                    state.pages.login.update(LoginMessage::PasswordEdited(password.to_string()));
+                    state
+                        .pages
+                        .login
+                        .update(LoginMessage::PasswordEdited(password.to_string()));
                 }
 
                 Command::none()
             }
             // TODO
-            Err(_) => Command::none()
-        }
+            Err(_) => Command::none(),
+        },
         Message::SettingsSaved(message) => match message {
             Ok(()) => {
                 println!("Saved settings");
@@ -78,7 +83,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 println!("Failed to save settings");
                 Command::none()
             }
-        }
+        },
 
         // After we've successfully logged in, fetch all resources.
         Message::LoadedAPI(result) => match result {

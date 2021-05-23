@@ -65,10 +65,10 @@ impl Application for FluminursDesktop {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        (Self::default(), Command::perform(
-            FluminursDesktopSettings::load(),
-            Message::SettingsLoaded
-        ))
+        (
+            Self::default(),
+            Command::perform(FluminursDesktopSettings::load(), Message::SettingsLoaded),
+        )
     }
 
     fn title(&self) -> String {
