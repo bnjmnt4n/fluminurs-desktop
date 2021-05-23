@@ -30,6 +30,8 @@ pub enum Message {
     SettingsLoaded(Result<Settings, Error>),
     SettingsSaved(Result<(), Error>),
     LoadedAPI(Result<(Api, String, String, String, DataItems<Module>), Error>),
+    LoadModules(()),
+    LoadedModules(Result<DataItems<Module>, Error>),
     LoadResources(ResourceType),
     LoadedResources((ResourceType, Result<DataItems<ResourceState>, Error>)),
     ResourceMessage((ResourceType, String, PathBuf, ResourceMessage)),
@@ -115,6 +117,42 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 ])
             }
             Err(_) => state.pages.login.update(LoginMessage::Failed),
+        },
+
+        // Load modules.
+        Message::LoadModules(()) => {
+            match state.api.as_ref().cloned() {
+                Some(api) => {
+                    state.data.modules.fetch_status = FetchStatus::Fetching;
+                    let last_updated = SystemTime::now();
+
+                    Command::perform(
+                        async move {
+                            let api = api;
+                            // TODO: don't hardcode
+                            api::load_modules(&api, Some("2020".to_owned()), last_updated).await
+                        },
+                        Message::LoadedModules,
+                    )
+                }
+                // TODO: refresh API?
+                None => Command::none(),
+            }
+        }
+
+        // Update loaded modules.
+        Message::LoadedModules(result) => match result {
+            Ok(modules) => {
+                state.data.modules = modules;
+
+                Command::none()
+            }
+            // TODO
+            Err(_) => {
+                state.data.modules.fetch_status = FetchStatus::Error;
+
+                Command::none()
+            }
         },
 
         // Load resources.

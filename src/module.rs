@@ -21,7 +21,9 @@ pub struct Module {
 }
 
 #[derive(Debug, Clone)]
-pub enum ModuleMessage {}
+pub enum ModuleMessage {
+    RefreshModules,
+}
 
 impl Module {
     pub fn new(module: FluminursModule, last_updated: SystemTime) -> Self {
