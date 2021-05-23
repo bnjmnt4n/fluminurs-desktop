@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 use iced::{button, Align, Button, Element, Length, Row, Text};
 
-use fluminurs::module::Module;
 use fluminurs::resource::Resource as FluminursResource;
 use fluminurs::{
     conferencing::ZoomRecording,
@@ -14,6 +13,8 @@ use fluminurs::{
     multimedia::{ExternalVideo, InternalVideo},
     weblecture::WebLectureVideo,
 };
+
+use crate::module::Module;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceState {

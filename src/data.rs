@@ -4,8 +4,7 @@ use tokio;
 use serde::{Deserialize, Serialize};
 use serde_json;
 
-use fluminurs::module::Module;
-
+use crate::module::Module;
 use crate::resource::ResourceState;
 use crate::Error;
 

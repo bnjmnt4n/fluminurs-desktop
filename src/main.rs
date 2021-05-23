@@ -2,12 +2,13 @@ use std::collections::HashMap;
 
 use iced::{executor, Application, Clipboard, Column, Command, Element, Settings};
 
-use fluminurs::{module::Module, Api};
+use fluminurs::Api;
 
 mod api;
 mod data;
 mod header;
 mod message;
+mod module;
 mod pages;
 mod resource;
 mod settings;
@@ -16,6 +17,7 @@ mod utils;
 use crate::data::Data;
 use crate::header::Header;
 use crate::message::{handle_message, Message};
+use crate::module::Module;
 use crate::pages::{Page, Pages};
 use crate::resource::ResourceType;
 use crate::settings::Settings as FluminursDesktopSettings;

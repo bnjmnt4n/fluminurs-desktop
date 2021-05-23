@@ -1,16 +1,12 @@
 use iced::{scrollable, Column, Command, Container, Element, Length, Scrollable, Text};
 
-use fluminurs::module::Module;
-
 use crate::message::Message;
+use crate::module::{Module, ModuleMessage};
 
 #[derive(Debug, Clone)]
 pub struct ModulesPage {
     scroll: scrollable::State,
 }
-
-#[derive(Debug, Clone)]
-pub enum ModulesMessage {}
 
 impl ModulesPage {
     pub fn default() -> Self {
@@ -19,27 +15,23 @@ impl ModulesPage {
         }
     }
 
-    pub fn update(&mut self, _message: ModulesMessage) -> Command<Message> {
+    pub fn update(&mut self, _message: ModuleMessage) -> Command<Message> {
         Command::none()
     }
 
-    pub fn view(&mut self, modules: &Option<Vec<Module>>) -> Element<ModulesMessage> {
+    pub fn view<'a>(&'a mut self, modules: &'a Option<Vec<Module>>) -> Element<'a, ModuleMessage> {
         let modules: Element<_> = if let Some(modules) = modules {
             let col = Column::new().spacing(20);
             let col = col.push(Text::new("You are taking:"));
             let col = modules
                 .iter()
-                .filter(|m| m.is_taking())
-                .fold(col, |column, module| {
-                    column.push(Text::new(format!("{} {}\n", module.code, module.name)))
-                });
+                .filter(|m| m.is_taking)
+                .fold(col, |column, module| column.push(module.view()));
             let col = col.push(Text::new("You are teaching:"));
             let col = modules
                 .iter()
-                .filter(|m| m.is_teaching())
-                .fold(col, |column, module| {
-                    column.push(Text::new(format!("{} {}\n", module.code, module.name)))
-                });
+                .filter(|m| m.is_teaching)
+                .fold(col, |column, module| column.push(module.view()));
 
             col.into()
         } else {

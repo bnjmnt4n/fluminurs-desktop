@@ -2,13 +2,15 @@ use futures_util::future;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
-use fluminurs::module::Module;
+use fluminurs::module::Module as FluminursModule;
 use fluminurs::resource::{
     sort_and_make_all_paths_unique, OverwriteMode, OverwriteResult, Resource as FluminursResource,
 };
 use fluminurs::Api;
 
+use crate::module::Module;
 use crate::resource::{Resource, ResourceState};
 use crate::Error;
 
@@ -24,20 +26,31 @@ pub async fn login(
 
     let name = api.name().await.map_err(|_| Error {})?;
 
-    let modules = api
-        // TODO: no hardcode!
-        .modules(Some("2020".to_owned()))
-        .await
-        .map_err(|_| Error {})?;
+    let modules = load_modules(&api, Some("2020".to_string()), SystemTime::now()).await?;
 
     Ok((api, username, password, name, modules))
 }
 
 // TODO: reduce code duplication with fluminurs
 
+pub async fn load_modules(
+    api: &Api,
+    term: Option<String>,
+    last_updated: SystemTime,
+) -> Result<Vec<Module>, Error> {
+    Ok(api
+        // TODO: no hardcode!
+        .modules(term)
+        .await
+        .map_err(|_| Error {})?
+        .into_iter()
+        .map(|module| Module::new(module, last_updated))
+        .collect())
+}
+
 pub async fn load_modules_files(
     api: Api,
-    modules: Vec<Module>,
+    modules: Vec<FluminursModule>,
 ) -> Result<Vec<ResourceState>, Error> {
     let include_uploadable_folders = true;
 
@@ -97,7 +110,7 @@ pub async fn load_modules_files(
 
 pub async fn load_modules_multimedia(
     api: Api,
-    modules: Vec<Module>,
+    modules: Vec<FluminursModule>,
 ) -> Result<Vec<ResourceState>, Error> {
     let multimedias = modules
         .iter()
@@ -161,7 +174,7 @@ pub async fn load_modules_multimedia(
 
 pub async fn load_modules_weblectures(
     api: Api,
-    modules: Vec<Module>,
+    modules: Vec<FluminursModule>,
 ) -> Result<Vec<ResourceState>, Error> {
     let weblectures = modules
         .iter()
@@ -220,7 +233,7 @@ pub async fn load_modules_weblectures(
 
 pub async fn load_modules_conferences(
     api: Api,
-    modules: Vec<Module>,
+    modules: Vec<FluminursModule>,
 ) -> Result<Vec<ResourceState>, Error> {
     let conferences = modules
         .iter()

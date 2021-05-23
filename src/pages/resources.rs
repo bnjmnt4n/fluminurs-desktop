@@ -5,9 +5,8 @@ use iced::{
     button, scrollable, Button, Column, Command, Container, Element, Length, Scrollable, Text,
 };
 
-use fluminurs::module::Module;
-
 use crate::message::Message;
+use crate::module::Module;
 use crate::resource::{ResourceMessage, ResourceState, ResourceType};
 
 #[derive(Debug, Clone)]

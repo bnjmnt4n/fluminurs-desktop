@@ -2,14 +2,13 @@ use std::path::PathBuf;
 
 use iced::Command;
 
-use fluminurs::module::Module;
 use fluminurs::Api;
 
 use crate::api;
 use crate::header::HeaderMessage;
+use crate::module::{Module, ModuleMessage};
 use crate::pages::loading::LoadingMessage;
 use crate::pages::login::LoginMessage;
-use crate::pages::modules::ModulesMessage;
 use crate::pages::resources::{ResourcesMessage, ResourcesPage};
 use crate::pages::Page;
 use crate::resource::{DownloadStatus, ResourceMessage, ResourceState, ResourceType};
@@ -21,7 +20,7 @@ use crate::FluminursDesktop;
 pub enum Message {
     LoadingPage(LoadingMessage),
     LoginPage(LoginMessage),
-    ModulesPage(ModulesMessage),
+    ModulesPage(ModuleMessage),
     ResourcesPage((ResourceType, ResourcesMessage)),
     Header(HeaderMessage),
     SwitchPage(Page),
@@ -119,33 +118,40 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         Message::LoadResources(resource_type) => {
             match state.api.as_ref().cloned() {
                 Some(api) => match state.data.modules.as_ref().cloned() {
-                    Some(modules) => Command::batch(vec![
-                        Command::perform(
-                            async move { (resource_type, ResourcesMessage::RefreshInProgress) },
-                            Message::ResourcesPage,
-                        ),
-                        Command::perform(
-                            async move {
-                                let result = match resource_type {
-                                    ResourceType::File => {
-                                        api::load_modules_files(api, modules).await
-                                    }
-                                    ResourceType::Multimedia => {
-                                        api::load_modules_multimedia(api, modules).await
-                                    }
-                                    ResourceType::Weblecture => {
-                                        api::load_modules_weblectures(api, modules).await
-                                    }
-                                    ResourceType::Conference => {
-                                        api::load_modules_conferences(api, modules).await
-                                    }
-                                };
+                    Some(modules) => {
+                        let modules = modules
+                            .into_iter()
+                            .filter_map(|module| module.internal_module)
+                            .collect();
 
-                                (resource_type, result)
-                            },
-                            Message::LoadedResources,
-                        ),
-                    ]),
+                        Command::batch(vec![
+                            Command::perform(
+                                async move { (resource_type, ResourcesMessage::RefreshInProgress) },
+                                Message::ResourcesPage,
+                            ),
+                            Command::perform(
+                                async move {
+                                    let result = match resource_type {
+                                        ResourceType::File => {
+                                            api::load_modules_files(api, modules).await
+                                        }
+                                        ResourceType::Multimedia => {
+                                            api::load_modules_multimedia(api, modules).await
+                                        }
+                                        ResourceType::Weblecture => {
+                                            api::load_modules_weblectures(api, modules).await
+                                        }
+                                        ResourceType::Conference => {
+                                            api::load_modules_conferences(api, modules).await
+                                        }
+                                    };
+
+                                    (resource_type, result)
+                                },
+                                Message::LoadedResources,
+                            ),
+                        ])
+                    }
                     // TODO: refetch modules?
                     None => Command::none(),
                 },
