@@ -7,7 +7,7 @@ use crate::pages::modules::ModulesPage;
 use crate::pages::resources::ResourcesPage;
 use crate::resource::ResourceType;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Page {
     Login,
     Modules,
