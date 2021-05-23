@@ -7,6 +7,7 @@ use fluminurs::Api;
 
 use crate::api;
 use crate::header::HeaderMessage;
+use crate::pages::loading::LoadingMessage;
 use crate::pages::login::LoginMessage;
 use crate::pages::modules::ModulesMessage;
 use crate::pages::resources::{ResourcesMessage, ResourcesPage};
@@ -18,6 +19,7 @@ use crate::FluminursDesktop;
 
 #[derive(Debug)]
 pub enum Message {
+    LoadingPage(LoadingMessage),
     LoginPage(LoginMessage),
     ModulesPage(ModulesMessage),
     ResourcesPage((ResourceType, ResourcesMessage)),
@@ -38,6 +40,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
     match message {
         // For messages that have to deal with local state, pass them back to
         // be handled by each individual page/component.
+        Message::LoadingPage(message) => state.pages.loading.update(message),
         Message::LoginPage(message) => state.pages.login.update(message),
         Message::ModulesPage(message) => state.pages.modules.update(message),
         Message::ResourcesPage((resource_type, message)) => {
@@ -54,6 +57,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         Message::SettingsLoaded(message) => match message {
             Ok(settings) => {
                 state.settings = settings;
+                state.current_page = Page::Login;
 
                 if let Some(username) = state.settings.get_username() {
                     state

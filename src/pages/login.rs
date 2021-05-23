@@ -135,13 +135,12 @@ impl LoginPage {
             .push(password_input.style(style::TextInput::UsernameInput))
             .push(login_button);
 
-        let container = Container::new(content)
+        Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x()
-            .center_y();
-
-        container.into()
+            .center_y()
+            .into()
     }
 }
 

@@ -1,7 +1,9 @@
+pub mod loading;
 pub mod login;
 pub mod modules;
 pub mod resources;
 
+use crate::pages::loading::LoadingPage;
 use crate::pages::login::LoginPage;
 use crate::pages::modules::ModulesPage;
 use crate::pages::resources::ResourcesPage;
@@ -9,6 +11,7 @@ use crate::resource::ResourceType;
 
 #[derive(Debug, Clone)]
 pub enum Page {
+    Loading,
     Login,
     Modules,
     Files,
@@ -18,6 +21,7 @@ pub enum Page {
 }
 
 pub struct Pages {
+    pub loading: LoadingPage,
     pub login: LoginPage,
     pub modules: ModulesPage,
     pub files: ResourcesPage,
@@ -27,8 +31,9 @@ pub struct Pages {
 }
 
 impl Pages {
-    pub fn default() -> Pages {
+    pub fn default() -> Self {
         Pages {
+            loading: LoadingPage::default(),
             login: LoginPage::default(),
             modules: ModulesPage::default(),
             files: ResourcesPage::default(ResourceType::File),

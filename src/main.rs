@@ -73,6 +73,7 @@ impl Application for FluminursDesktop {
 
     fn title(&self) -> String {
         match self.current_page {
+            Page::Loading => String::from("fluminurs-desktop"),
             Page::Login => String::from("Login"),
             Page::Modules => String::from("Modules"),
             Page::Files => String::from("Files"),
@@ -97,6 +98,7 @@ impl Application for FluminursDesktop {
         };
 
         let page = match self.current_page {
+            Page::Loading => self.pages.loading.view().map(Message::LoadingPage),
             Page::Login => self.pages.login.view().map(Message::LoginPage),
             Page::Modules => self
                 .pages
