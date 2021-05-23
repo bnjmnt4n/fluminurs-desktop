@@ -94,7 +94,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             Ok((api, username, password, name, modules)) => {
                 state.name = Some(name);
                 state.api = Some(api);
-                state.modules = Some(modules.clone());
+                state.data.modules = Some(modules.clone());
                 // TODO: avoid cloning everything
                 state.modules_map = modules
                     .into_iter()
@@ -118,7 +118,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         // Load resources.
         Message::LoadResources(resource_type) => {
             match state.api.as_ref().cloned() {
-                Some(api) => match state.modules.as_ref().cloned() {
+                Some(api) => match state.data.modules.as_ref().cloned() {
                     Some(modules) => Command::batch(vec![
                         Command::perform(
                             async move { (resource_type, ResourcesMessage::RefreshInProgress) },
@@ -158,10 +158,10 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         Message::LoadedResources((resource_type, result)) => match result {
             Ok(resources) => {
                 match resource_type {
-                    ResourceType::File => state.files = Some(resources),
-                    ResourceType::Multimedia => state.multimedia = Some(resources),
-                    ResourceType::Weblecture => state.weblectures = Some(resources),
-                    ResourceType::Conference => state.conferences = Some(resources),
+                    ResourceType::File => state.data.files = Some(resources),
+                    ResourceType::Multimedia => state.data.multimedia = Some(resources),
+                    ResourceType::Weblecture => state.data.weblectures = Some(resources),
+                    ResourceType::Conference => state.data.conferences = Some(resources),
                 };
 
                 Command::perform(
@@ -195,23 +195,29 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                                     })
                                     .map(|file| {
                                         file.download_status = DownloadStatus::Downloading;
-                                        let resource = file.resource.clone();
-                                        let path = file.path.clone();
-                                        let download_path = file.local_resource_path(&modules_map);
+                                        match &file.resource {
+                                            Some(resource) => {
+                                                let resource = resource.clone();
+                                                let path = file.path.clone();
+                                                let download_path =
+                                                    file.local_resource_path(&modules_map);
 
-                                        Command::perform(
-                                            async move {
-                                                let result = api::download_resource(
-                                                    api,
-                                                    resource,
-                                                    download_path,
-                                                    path.clone(),
+                                                Command::perform(
+                                                    async move {
+                                                        let result = api::download_resource(
+                                                            api,
+                                                            resource,
+                                                            download_path,
+                                                            path.clone(),
+                                                        )
+                                                        .await;
+                                                        (resource_type, module_id, path, result)
+                                                    },
+                                                    Message::ResourceDownloaded,
                                                 )
-                                                .await;
-                                                (resource_type, module_id, path, result)
-                                            },
-                                            Message::ResourceDownloaded,
-                                        )
+                                            }
+                                            None => Command::none(),
+                                        }
                                     })
                             })
                             .unwrap_or_else(|| Command::none())
@@ -267,10 +273,10 @@ fn get_resources<'a>(
     resource_type: ResourceType,
 ) -> Option<&'a mut Vec<ResourceState>> {
     match resource_type {
-        ResourceType::File => state.files.as_mut(),
-        ResourceType::Multimedia => state.multimedia.as_mut(),
-        ResourceType::Weblecture => state.weblectures.as_mut(),
-        ResourceType::Conference => state.conferences.as_mut(),
+        ResourceType::File => state.data.files.as_mut(),
+        ResourceType::Multimedia => state.data.multimedia.as_mut(),
+        ResourceType::Weblecture => state.data.weblectures.as_mut(),
+        ResourceType::Conference => state.data.conferences.as_mut(),
     }
 }
 

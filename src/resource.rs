@@ -1,5 +1,8 @@
 use std::collections::HashMap;
+use std::default::Default;
 use std::path::{Path, PathBuf};
+
+use serde::{Deserialize, Serialize};
 
 use iced::{button, Align, Button, Element, Length, Row, Text};
 
@@ -12,14 +15,18 @@ use fluminurs::{
     weblecture::WebLectureVideo,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceState {
     pub module_id: String,
     pub path: PathBuf,
 
-    pub resource: Resource,
+    #[serde(skip)]
+    pub resource: Option<Resource>,
+    #[serde(skip)]
     pub download_status: DownloadStatus,
+    #[serde(skip)]
     open_button: button::State,
+    #[serde(skip)]
     download_button: button::State,
 }
 
@@ -40,11 +47,17 @@ pub enum Resource {
     ZoomRecording(ZoomRecording),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DownloadStatus {
     Downloaded,
     Downloading,
     NotDownloaded,
+}
+
+impl Default for DownloadStatus {
+    fn default() -> Self {
+        DownloadStatus::NotDownloaded
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -58,7 +71,7 @@ impl ResourceState {
         ResourceState {
             module_id,
             path: get_resource_path(&resource),
-            resource,
+            resource: Some(resource),
             download_status: DownloadStatus::NotDownloaded,
             open_button: button::State::new(),
             download_button: button::State::new(),
@@ -71,11 +84,12 @@ impl ResourceState {
             None => "Unknown",
         })
         .join(Path::new(match &self.resource {
-            Resource::File(_) => "Files",
-            Resource::InternalVideo(_) => "Multimedia",
-            Resource::ExternalVideo(_) => "Multimedia",
-            Resource::WebLectureVideo(_) => "Weblectures",
-            Resource::ZoomRecording(_) => "Conferences",
+            Some(Resource::File(_)) => "Files",
+            Some(Resource::InternalVideo(_)) => "Multimedia",
+            Some(Resource::ExternalVideo(_)) => "Multimedia",
+            Some(Resource::WebLectureVideo(_)) => "Weblectures",
+            Some(Resource::ZoomRecording(_)) => "Conferences",
+            None => "None",
         }))
         .join(self.path.clone())
     }
