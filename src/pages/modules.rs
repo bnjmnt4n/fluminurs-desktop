@@ -1,5 +1,6 @@
 use iced::{scrollable, Column, Command, Container, Element, Length, Scrollable, Text};
 
+use crate::data::DataItems;
 use crate::message::Message;
 use crate::module::{Module, ModuleMessage};
 
@@ -19,16 +20,18 @@ impl ModulesPage {
         Command::none()
     }
 
-    pub fn view<'a>(&'a mut self, modules: &'a Option<Vec<Module>>) -> Element<'a, ModuleMessage> {
-        let modules: Element<_> = if let Some(modules) = modules {
+    pub fn view<'a>(&'a mut self, modules: &'a DataItems<Module>) -> Element<'a, ModuleMessage> {
+        let modules: Element<_> = if modules.items.len() > 0 {
             let col = Column::new().spacing(20);
             let col = col.push(Text::new("You are taking:"));
             let col = modules
+                .items
                 .iter()
                 .filter(|m| m.is_taking)
                 .fold(col, |column, module| column.push(module.view()));
             let col = col.push(Text::new("You are teaching:"));
             let col = modules
+                .items
                 .iter()
                 .filter(|m| m.is_teaching)
                 .fold(col, |column, module| column.push(module.view()));

@@ -10,6 +10,7 @@ use fluminurs::resource::{
 };
 use fluminurs::Api;
 
+use crate::data::{DataItems, FetchStatus};
 use crate::module::Module;
 use crate::resource::{Resource, ResourceState};
 use crate::Error;
@@ -17,7 +18,7 @@ use crate::Error;
 pub async fn login(
     username: String,
     password: String,
-) -> Result<(Api, String, String, String, Vec<Module>), Error> {
+) -> Result<(Api, String, String, String, DataItems<Module>), Error> {
     let api = Api::with_login(&username, &password)
         .await
         .map_err(|_| Error {})?
@@ -26,6 +27,7 @@ pub async fn login(
 
     let name = api.name().await.map_err(|_| Error {})?;
 
+    // TODO: no hardcode!
     let modules = load_modules(&api, Some("2020".to_string()), SystemTime::now()).await?;
 
     Ok((api, username, password, name, modules))
@@ -37,21 +39,27 @@ pub async fn load_modules(
     api: &Api,
     term: Option<String>,
     last_updated: SystemTime,
-) -> Result<Vec<Module>, Error> {
-    Ok(api
-        // TODO: no hardcode!
+) -> Result<DataItems<Module>, Error> {
+    let items = api
         .modules(term)
         .await
         .map_err(|_| Error {})?
         .into_iter()
         .map(|module| Module::new(module, last_updated))
-        .collect())
+        .collect();
+
+    Ok(DataItems {
+        last_updated,
+        items,
+        fetch_status: FetchStatus::Idle,
+    })
 }
 
 pub async fn load_modules_files(
     api: Api,
     modules: Vec<FluminursModule>,
-) -> Result<Vec<ResourceState>, Error> {
+    last_updated: SystemTime,
+) -> Result<DataItems<ResourceState>, Error> {
     let include_uploadable_folders = true;
 
     let root_dirs = modules
@@ -105,13 +113,19 @@ pub async fn load_modules_files(
     for (module_id, e) in errors {
         println!("Failed loading module files: {} {}", module_id, e);
     }
-    Ok(files)
+
+    Ok(DataItems {
+        last_updated,
+        items: files,
+        fetch_status: FetchStatus::Idle,
+    })
 }
 
 pub async fn load_modules_multimedia(
     api: Api,
     modules: Vec<FluminursModule>,
-) -> Result<Vec<ResourceState>, Error> {
+    last_updated: SystemTime,
+) -> Result<DataItems<ResourceState>, Error> {
     let multimedias = modules
         .iter()
         .filter(|module| module.has_access())
@@ -169,13 +183,18 @@ pub async fn load_modules_multimedia(
         println!("Failed loading module multimedia: {} {}", module_id, e);
     }
 
-    Ok(videos)
+    Ok(DataItems {
+        last_updated,
+        items: videos,
+        fetch_status: FetchStatus::Idle,
+    })
 }
 
 pub async fn load_modules_weblectures(
     api: Api,
     modules: Vec<FluminursModule>,
-) -> Result<Vec<ResourceState>, Error> {
+    last_updated: SystemTime,
+) -> Result<DataItems<ResourceState>, Error> {
     let weblectures = modules
         .iter()
         .filter(|module| module.has_access())
@@ -228,13 +247,18 @@ pub async fn load_modules_weblectures(
         println!("Failed loading module web lecture: {} {}", module_id, e);
     }
 
-    Ok(files)
+    Ok(DataItems {
+        last_updated,
+        items: files,
+        fetch_status: FetchStatus::Idle,
+    })
 }
 
 pub async fn load_modules_conferences(
     api: Api,
     modules: Vec<FluminursModule>,
-) -> Result<Vec<ResourceState>, Error> {
+    last_updated: SystemTime,
+) -> Result<DataItems<ResourceState>, Error> {
     let conferences = modules
         .iter()
         .filter(|module| module.has_access())
@@ -287,7 +311,11 @@ pub async fn load_modules_conferences(
         println!("Failed loading module conferences: {} {}", module_id, e);
     }
 
-    Ok(zoom_recordings)
+    Ok(DataItems {
+        last_updated,
+        items: zoom_recordings,
+        fetch_status: FetchStatus::Idle,
+    })
 }
 
 fn make_temp_file_name(name: &OsStr) -> OsString {

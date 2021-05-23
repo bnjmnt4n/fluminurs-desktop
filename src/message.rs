@@ -1,10 +1,12 @@
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use iced::Command;
 
 use fluminurs::Api;
 
 use crate::api;
+use crate::data::{DataItems, FetchStatus};
 use crate::header::HeaderMessage;
 use crate::module::{Module, ModuleMessage};
 use crate::pages::loading::LoadingMessage;
@@ -27,9 +29,9 @@ pub enum Message {
 
     SettingsLoaded(Result<Settings, Error>),
     SettingsSaved(Result<(), Error>),
-    LoadedAPI(Result<(Api, String, String, String, Vec<Module>), Error>),
+    LoadedAPI(Result<(Api, String, String, String, DataItems<Module>), Error>),
     LoadResources(ResourceType),
-    LoadedResources((ResourceType, Result<Vec<ResourceState>, Error>)),
+    LoadedResources((ResourceType, Result<DataItems<ResourceState>, Error>)),
     ResourceMessage((ResourceType, String, PathBuf, ResourceMessage)),
     ResourceDownloaded((ResourceType, String, PathBuf, Result<PathBuf, Error>)),
     OpenFileResult(Result<std::process::ExitStatus, std::io::Error>),
@@ -93,12 +95,13 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             Ok((api, username, password, name, modules)) => {
                 state.name = Some(name);
                 state.api = Some(api);
-                state.data.modules = Some(modules.clone());
                 // TODO: avoid cloning everything
                 state.modules_map = modules
-                    .into_iter()
-                    .map(|item| (item.id.to_string(), item))
+                    .items
+                    .iter()
+                    .map(|item| (item.id.to_string(), item.clone()))
                     .collect();
+                state.data.modules = modules;
                 state.current_page = Page::Modules;
 
                 state.settings.set_login_details(username, password);
@@ -117,44 +120,49 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         // Load resources.
         Message::LoadResources(resource_type) => {
             match state.api.as_ref().cloned() {
-                Some(api) => match state.data.modules.as_ref().cloned() {
-                    Some(modules) => {
-                        let modules = modules
+                Some(api) => {
+                    if state.data.modules.items.len() > 0 {
+                        let modules = state
+                            .data
+                            .modules
+                            .items
+                            .clone()
                             .into_iter()
                             .filter_map(|module| module.internal_module)
                             .collect();
+                        let last_updated = SystemTime::now();
+                        let fetch_status = get_fetch_status(state, resource_type);
+                        *fetch_status = FetchStatus::Fetching;
 
-                        Command::batch(vec![
-                            Command::perform(
-                                async move { (resource_type, ResourcesMessage::RefreshInProgress) },
-                                Message::ResourcesPage,
-                            ),
-                            Command::perform(
-                                async move {
-                                    let result = match resource_type {
-                                        ResourceType::File => {
-                                            api::load_modules_files(api, modules).await
-                                        }
-                                        ResourceType::Multimedia => {
-                                            api::load_modules_multimedia(api, modules).await
-                                        }
-                                        ResourceType::Weblecture => {
-                                            api::load_modules_weblectures(api, modules).await
-                                        }
-                                        ResourceType::Conference => {
-                                            api::load_modules_conferences(api, modules).await
-                                        }
-                                    };
+                        Command::perform(
+                            async move {
+                                let result = match resource_type {
+                                    ResourceType::File => {
+                                        api::load_modules_files(api, modules, last_updated).await
+                                    }
+                                    ResourceType::Multimedia => {
+                                        api::load_modules_multimedia(api, modules, last_updated)
+                                            .await
+                                    }
+                                    ResourceType::Weblecture => {
+                                        api::load_modules_weblectures(api, modules, last_updated)
+                                            .await
+                                    }
+                                    ResourceType::Conference => {
+                                        api::load_modules_conferences(api, modules, last_updated)
+                                            .await
+                                    }
+                                };
 
-                                    (resource_type, result)
-                                },
-                                Message::LoadedResources,
-                            ),
-                        ])
+                                (resource_type, result)
+                            },
+                            Message::LoadedResources,
+                        )
+                    } else {
+                        // No modules
+                        Command::none()
                     }
-                    // TODO: refetch modules?
-                    None => Command::none(),
-                },
+                }
                 // TODO: refresh API?
                 None => Command::none(),
             }
@@ -164,22 +172,21 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         Message::LoadedResources((resource_type, result)) => match result {
             Ok(resources) => {
                 match resource_type {
-                    ResourceType::File => state.data.files = Some(resources),
-                    ResourceType::Multimedia => state.data.multimedia = Some(resources),
-                    ResourceType::Weblecture => state.data.weblectures = Some(resources),
-                    ResourceType::Conference => state.data.conferences = Some(resources),
-                };
+                    ResourceType::File => state.data.files = resources,
+                    ResourceType::Multimedia => state.data.multimedia = resources,
+                    ResourceType::Weblecture => state.data.weblectures = resources,
+                    ResourceType::Conference => state.data.conferences = resources,
+                }
 
-                Command::perform(
-                    async move { (resource_type, ResourcesMessage::RefreshSuccessful) },
-                    Message::ResourcesPage,
-                )
+                Command::none()
             }
             // TODO
-            Err(_) => Command::perform(
-                async move { (resource_type, ResourcesMessage::RefreshFailed) },
-                Message::ResourcesPage,
-            ),
+            Err(_) => {
+                let fetch_status = get_fetch_status(state, resource_type);
+                *fetch_status = FetchStatus::Error;
+
+                Command::none()
+            }
         },
 
         // Perform a specific action for a resource.
@@ -193,38 +200,32 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                         let modules_map = state.modules_map.clone();
                         let resources = get_resources(state, resource_type);
                         resources
-                            .and_then(|files| {
-                                files
-                                    .iter_mut()
-                                    .find(|file| {
-                                        file.path.eq(&path) && file.module_id.eq(&module_id)
-                                    })
-                                    .map(|file| {
-                                        file.download_status = DownloadStatus::Downloading;
-                                        match &file.resource {
-                                            Some(resource) => {
-                                                let resource = resource.clone();
-                                                let path = file.path.clone();
-                                                let download_path =
-                                                    file.local_resource_path(&modules_map);
+                            .iter_mut()
+                            .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
+                            .map(|file| {
+                                file.download_status = DownloadStatus::Downloading;
+                                match &file.resource {
+                                    Some(resource) => {
+                                        let resource = resource.clone();
+                                        let path = file.path.clone();
+                                        let download_path = file.local_resource_path(&modules_map);
 
-                                                Command::perform(
-                                                    async move {
-                                                        let result = api::download_resource(
-                                                            api,
-                                                            resource,
-                                                            download_path,
-                                                            path.clone(),
-                                                        )
-                                                        .await;
-                                                        (resource_type, module_id, path, result)
-                                                    },
-                                                    Message::ResourceDownloaded,
+                                        Command::perform(
+                                            async move {
+                                                let result = api::download_resource(
+                                                    api,
+                                                    resource,
+                                                    download_path,
+                                                    path.clone(),
                                                 )
-                                            }
-                                            None => Command::none(),
-                                        }
-                                    })
+                                                .await;
+                                                (resource_type, module_id, path, result)
+                                            },
+                                            Message::ResourceDownloaded,
+                                        )
+                                    }
+                                    None => Command::none(),
+                                }
                             })
                             .unwrap_or_else(|| Command::none())
                     }
@@ -252,22 +253,19 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         Message::ResourceDownloaded((resource_type, module_id, path, message)) => {
             let resources = get_resources(state, resource_type);
             resources
-                .and_then(|files| {
-                    files
-                        .iter_mut()
-                        .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
-                        .map(|file| {
-                            match message {
-                                Ok(_path) => {
-                                    // TODO: handle renames based on the new path returned.
-                                    file.download_status = DownloadStatus::Downloaded;
-                                }
-                                // TODO: handle error
-                                Err(_) => {}
-                            };
+                .iter_mut()
+                .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
+                .map(|file| {
+                    match message {
+                        Ok(_path) => {
+                            // TODO: handle renames based on the new path returned.
+                            file.download_status = DownloadStatus::Downloaded;
+                        }
+                        // TODO: handle error
+                        Err(_) => {}
+                    };
 
-                            Command::none()
-                        })
+                    Command::none()
                 })
                 .unwrap_or_else(|| Command::none())
         }
@@ -277,12 +275,12 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 fn get_resources<'a>(
     state: &'a mut FluminursDesktop,
     resource_type: ResourceType,
-) -> Option<&'a mut Vec<ResourceState>> {
+) -> &'a mut Vec<ResourceState> {
     match resource_type {
-        ResourceType::File => state.data.files.as_mut(),
-        ResourceType::Multimedia => state.data.multimedia.as_mut(),
-        ResourceType::Weblecture => state.data.weblectures.as_mut(),
-        ResourceType::Conference => state.data.conferences.as_mut(),
+        ResourceType::File => state.data.files.items.as_mut(),
+        ResourceType::Multimedia => state.data.multimedia.items.as_mut(),
+        ResourceType::Weblecture => state.data.weblectures.items.as_mut(),
+        ResourceType::Conference => state.data.conferences.items.as_mut(),
     }
 }
 
@@ -295,5 +293,14 @@ fn get_resources_page(
         ResourceType::Multimedia => &mut state.pages.multimedia,
         ResourceType::Weblecture => &mut state.pages.weblectures,
         ResourceType::Conference => &mut state.pages.conferences,
+    }
+}
+
+fn get_fetch_status(state: &mut FluminursDesktop, resource_type: ResourceType) -> &mut FetchStatus {
+    match resource_type {
+        ResourceType::File => &mut state.data.files.fetch_status,
+        ResourceType::Multimedia => &mut state.data.multimedia.fetch_status,
+        ResourceType::Weblecture => &mut state.data.weblectures.fetch_status,
+        ResourceType::Conference => &mut state.data.conferences.fetch_status,
     }
 }

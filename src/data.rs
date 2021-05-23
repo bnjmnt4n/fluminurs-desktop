@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use tokio;
+use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -10,21 +10,53 @@ use crate::Error;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Data {
-    pub modules: Option<Vec<Module>>,
-    pub files: Option<Vec<ResourceState>>,
-    pub multimedia: Option<Vec<ResourceState>>,
-    pub weblectures: Option<Vec<ResourceState>>,
-    pub conferences: Option<Vec<ResourceState>>,
+    pub modules: DataItems<Module>,
+    pub files: DataItems<ResourceState>,
+    pub multimedia: DataItems<ResourceState>,
+    pub weblectures: DataItems<ResourceState>,
+    pub conferences: DataItems<ResourceState>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataItems<T> {
+    pub last_updated: SystemTime,
+    pub items: Vec<T>,
+
+    #[serde(skip)]
+    pub fetch_status: FetchStatus,
+}
+
+impl<T> Default for DataItems<T> {
+    fn default() -> Self {
+        DataItems {
+            last_updated: SystemTime::UNIX_EPOCH,
+            items: vec![],
+            fetch_status: FetchStatus::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FetchStatus {
+    Idle,
+    Fetching,
+    Error,
+}
+
+impl Default for FetchStatus {
+    fn default() -> Self {
+        FetchStatus::Idle
+    }
 }
 
 impl Data {
     pub fn default() -> Self {
         Data {
-            modules: None,
-            files: None,
-            multimedia: None,
-            weblectures: None,
-            conferences: None,
+            modules: DataItems::default(),
+            files: DataItems::default(),
+            multimedia: DataItems::default(),
+            weblectures: DataItems::default(),
+            conferences: DataItems::default(),
         }
     }
 
