@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use iced::{executor, Application, Clipboard, Column, Command, Element, Settings};
 
+use futures_util::future;
+
 use fluminurs::Api;
 
 mod api;
@@ -65,7 +67,14 @@ impl Application for FluminursDesktop {
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         (
             Self::default(),
-            Command::perform(FluminursDesktopSettings::load(), Message::SettingsLoaded),
+            Command::perform(
+                async {
+                    let (settings, data) =
+                        future::join(FluminursDesktopSettings::load(), Data::load()).await;
+                    (settings, data)
+                },
+                Message::Startup,
+            ),
         )
     }
 

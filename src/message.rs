@@ -6,7 +6,7 @@ use iced::Command;
 use fluminurs::Api;
 
 use crate::api;
-use crate::data::{DataItems, FetchStatus};
+use crate::data::{Data, DataItems, FetchStatus};
 use crate::header::HeaderMessage;
 use crate::module::{Module, ModuleMessage};
 use crate::pages::loading::LoadingMessage;
@@ -29,7 +29,7 @@ pub enum Message {
     Header(HeaderMessage),
     SwitchPage(Page),
 
-    SettingsLoaded(Result<Settings, Error>),
+    Startup((Result<Settings, Error>, Result<Data, Error>)),
     SettingsSaved(Result<StorageWrite, Error>),
     DataSaved(Result<StorageWrite, Error>),
     LoadedAPI(Result<(Api, String, String, String, DataItems<Module>), Error>),
@@ -60,29 +60,39 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             Command::none()
         }
 
-        Message::SettingsLoaded(message) => match message {
-            Ok(settings) => {
-                state.settings = settings;
-                state.current_page = Page::Login;
+        // TODO: handle startup
+        Message::Startup((settings, data)) => {
+            match settings {
+                Ok(settings) => {
+                    state.settings = settings;
+                    state.current_page = Page::Login;
 
-                if let Some(username) = state.settings.get_username() {
-                    state
-                        .pages
-                        .login
-                        .update(LoginMessage::UsernameEdited(username.to_string()));
+                    if let Some(username) = state.settings.get_username() {
+                        state
+                            .pages
+                            .login
+                            .update(LoginMessage::UsernameEdited(username.to_string()));
+                    }
+                    if let Some(password) = state.settings.get_password() {
+                        state
+                            .pages
+                            .login
+                            .update(LoginMessage::PasswordEdited(password.to_string()));
+                    }
                 }
-                if let Some(password) = state.settings.get_password() {
-                    state
-                        .pages
-                        .login
-                        .update(LoginMessage::PasswordEdited(password.to_string()));
-                }
-
-                Command::none()
+                Err(_) => {}
             }
-            // TODO
-            Err(_) => Command::none(),
-        },
+
+            match data {
+                Ok(data) => {
+                    state.data = data;
+                }
+                Err(_) => {}
+            }
+
+            Command::none()
+        }
+
         Message::SettingsSaved(message) => match message {
             Ok(StorageWrite::Successful) => {
                 println!("Saved settings");
