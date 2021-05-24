@@ -28,7 +28,7 @@ pub async fn login(
     let name = api.name().await.map_err(|_| Error {})?;
 
     // TODO: no hardcode!
-    let modules = load_modules(&api, Some("2020".to_string()), SystemTime::now()).await?;
+    let modules = load_modules(&api, Some("2010".to_string()), SystemTime::now()).await?;
 
     Ok((api, username, password, name, modules))
 }
