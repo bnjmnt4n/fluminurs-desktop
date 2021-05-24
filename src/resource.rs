@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::default::Default;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -15,6 +14,7 @@ use fluminurs::{
     weblecture::WebLectureVideo,
 };
 
+use crate::data::FetchStatus;
 use crate::module::Module;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,7 +28,7 @@ pub struct ResourceState {
     #[serde(skip)]
     pub resource: Option<Resource>,
     #[serde(skip)]
-    pub download_status: DownloadStatus,
+    pub download_status: FetchStatus,
     #[serde(skip)]
     open_button: button::State,
     #[serde(skip)]
@@ -53,19 +53,6 @@ pub enum Resource {
 }
 
 #[derive(Debug, Clone)]
-pub enum DownloadStatus {
-    Downloaded,
-    Downloading,
-    NotDownloaded,
-}
-
-impl Default for DownloadStatus {
-    fn default() -> Self {
-        DownloadStatus::NotDownloaded
-    }
-}
-
-#[derive(Debug, Clone)]
 pub enum ResourceMessage {
     OpenResource,
     DownloadResource,
@@ -80,7 +67,7 @@ impl ResourceState {
             download_path: None,
             download_time: None,
             resource: None,
-            download_status: DownloadStatus::NotDownloaded,
+            download_status: FetchStatus::Idle,
             open_button: button::State::new(),
             download_button: button::State::new(),
         }
@@ -95,7 +82,7 @@ impl ResourceState {
             download_time: None,
 
             resource: Some(resource),
-            download_status: DownloadStatus::NotDownloaded,
+            download_status: FetchStatus::Idle,
             open_button: button::State::new(),
             download_button: button::State::new(),
         }
@@ -127,15 +114,22 @@ impl ResourceState {
                 self.local_resource_path(modules_map).display().to_string(),
             ));
 
+        let content = if let Some(_) = self.download_path {
+            content.push(
+                Button::new(&mut self.open_button, Text::new("Open"))
+                    .on_press(ResourceMessage::OpenResource),
+            )
+        } else {
+            content
+        };
+
         let download_content: Element<_> = match self.download_status {
-            DownloadStatus::Downloading => Text::new("Downloading…").into(),
-            DownloadStatus::NotDownloaded => {
-                Button::new(&mut self.download_button, Text::new("Download"))
-                    .on_press(ResourceMessage::DownloadResource)
-                    .into()
-            }
-            DownloadStatus::Downloaded => Button::new(&mut self.open_button, Text::new("Open"))
-                .on_press(ResourceMessage::OpenResource)
+            FetchStatus::Fetching => Text::new("Downloading…").into(),
+            FetchStatus::Idle => Button::new(&mut self.download_button, Text::new("Download"))
+                .on_press(ResourceMessage::DownloadResource)
+                .into(),
+            FetchStatus::Error => Button::new(&mut self.download_button, Text::new("Error…"))
+                .on_press(ResourceMessage::DownloadResource)
                 .into(),
         };
 

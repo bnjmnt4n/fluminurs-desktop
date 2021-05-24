@@ -13,7 +13,7 @@ use crate::pages::loading::LoadingMessage;
 use crate::pages::login::LoginMessage;
 use crate::pages::resources::{ResourcesMessage, ResourcesPage};
 use crate::pages::Page;
-use crate::resource::{DownloadStatus, ResourceMessage, ResourceState, ResourceType};
+use crate::resource::{ResourceMessage, ResourceState, ResourceType};
 use crate::settings::Settings;
 use crate::storage::{Storage, StorageWrite};
 use crate::utils::{construct_modules_map, merge_modules, merge_resources};
@@ -283,7 +283,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                             .iter_mut()
                             .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
                             .map(|file| {
-                                file.download_status = DownloadStatus::Downloading;
+                                file.download_status = FetchStatus::Fetching;
                                 match &file.resource {
                                     Some(resource) => {
                                         let resource = resource.clone();
@@ -337,17 +337,19 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 .find(|file| file.path.eq(&path) && file.module_id.eq(&module_id))
                 .map(|file| {
                     match message {
-                        Ok(_path) => {
+                        Ok(path) => {
                             // TODO: handle renames based on the new path returned.
-                            file.download_status = DownloadStatus::Downloaded;
+                            file.download_status = FetchStatus::Idle;
+                            file.download_path = Some(path);
+                            file.download_time = Some(file.last_updated);
                         }
                         // TODO: handle error
                         Err(_) => {}
                     };
+                });
+            state.data.mark_dirty();
 
-                    Command::none()
-                })
-                .unwrap_or_else(|| Command::none())
+            Command::perform(state.data.save(), Message::DataSaved)
         }
     }
 }
