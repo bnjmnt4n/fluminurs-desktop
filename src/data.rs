@@ -2,11 +2,10 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 use crate::module::Module;
 use crate::resource::ResourceState;
-use crate::Error;
+use crate::storage::Storage;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Data {
@@ -15,6 +14,11 @@ pub struct Data {
     pub multimedia: DataItems<ResourceState>,
     pub weblectures: DataItems<ResourceState>,
     pub conferences: DataItems<ResourceState>,
+
+    #[serde(skip)]
+    dirty: bool,
+    #[serde(skip)]
+    saving: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,9 +61,17 @@ impl Data {
             multimedia: DataItems::default(),
             weblectures: DataItems::default(),
             conferences: DataItems::default(),
+            dirty: false,
+            saving: false,
         }
     }
 
+    pub fn mark_dirty(&mut self) {
+        self.dirty = true;
+    }
+}
+
+impl Storage for Data {
     fn path() -> PathBuf {
         // TODO: change to default OS storage directory?
         let mut path = std::env::current_dir().unwrap_or(PathBuf::new());
@@ -68,33 +80,11 @@ impl Data {
         path
     }
 
-    pub async fn load() -> Result<Data, Error> {
-        let contents = tokio::fs::read_to_string(Self::path())
-            .await
-            .map_err(|_| Error {})?;
-
-        if let Ok(settings) = serde_json::from_str::<Data>(&contents) {
-            println!("Read data");
-            Ok(settings)
-        } else {
-            println!("Corrupt data, deleting file...");
-            tokio::fs::remove_file(Self::path())
-                .await
-                .map_err(|_| Error {})?;
-            Err(Error {})
-        }
+    fn get_dirty(&mut self) -> &mut bool {
+        &mut self.dirty
     }
 
-    pub async fn save(self) -> Result<(), Error> {
-        let json = serde_json::to_string_pretty(&self).map_err(|_| Error {})?;
-
-        let path = Self::path();
-
-        tokio::fs::write(path, json).await.map_err(|_| Error {})?;
-
-        // This is a simple way to save at most once every couple seconds
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-
-        Ok(())
+    fn get_saving(&mut self) -> &mut bool {
+        &mut self.saving
     }
 }

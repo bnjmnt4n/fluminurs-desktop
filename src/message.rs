@@ -31,6 +31,7 @@ pub enum Message {
 
     SettingsLoaded(Result<Settings, Error>),
     SettingsSaved(Result<StorageWrite, Error>),
+    DataSaved(Result<StorageWrite, Error>),
     LoadedAPI(Result<(Api, String, String, String, DataItems<Module>), Error>),
     LoadModules(()),
     LoadedModules(Result<DataItems<Module>, Error>),
@@ -103,18 +104,40 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             }
         },
 
+        Message::DataSaved(message) => match message {
+            Ok(StorageWrite::Successful) => {
+                println!("Saved data");
+                state.data.mark_saving(false);
+                Command::none()
+            }
+            Ok(StorageWrite::Retry) => {
+                println!("Retrying data save");
+                Command::perform(state.data.save(), Message::DataSaved)
+            }
+            Ok(StorageWrite::Unnecessary) => {
+                println!("No need to write data");
+                Command::none()
+            }
+            // TODO
+            Err(_) => {
+                println!("Failed to save data");
+                Command::none()
+            }
+        },
         // After we've successfully logged in, fetch all resources.
         Message::LoadedAPI(result) => match result {
             Ok((api, username, password, name, modules)) => {
                 state.name = Some(name);
                 state.api = Some(api);
                 merge_modules(&mut state.data.modules, modules);
+                state.data.mark_dirty();
                 state.modules_map = construct_modules_map(&state.data.modules.items);
                 state.current_page = Page::Modules;
 
                 state.settings.set_login_details(username, password);
 
                 Command::batch(vec![
+                    Command::perform(state.data.save(), Message::DataSaved),
                     Command::perform(state.settings.save(), Message::SettingsSaved),
                     Command::perform(async { ResourceType::File }, Message::LoadResources),
                     Command::perform(async { ResourceType::Multimedia }, Message::LoadResources),
@@ -149,8 +172,9 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         Message::LoadedModules(result) => match result {
             Ok(modules) => {
                 merge_modules(&mut state.data.modules, modules);
+                state.data.mark_dirty();
 
-                Command::none()
+                Command::perform(state.data.save(), Message::DataSaved)
             }
             // TODO
             Err(_) => {
@@ -222,8 +246,9 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 };
 
                 merge_resources(curr_resources, resources);
+                state.data.mark_dirty();
 
-                Command::none()
+                Command::perform(state.data.save(), Message::DataSaved)
             }
             // TODO
             Err(_) => {
