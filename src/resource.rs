@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 use std::default::Default;
 use std::path::{Path, PathBuf};
-
-use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
 
 use iced::{button, Align, Button, Element, Length, Row, Text};
+
+use serde::{Deserialize, Serialize};
 
 use fluminurs::resource::Resource as FluminursResource;
 use fluminurs::{
@@ -20,6 +21,9 @@ use crate::module::Module;
 pub struct ResourceState {
     pub module_id: String,
     pub path: PathBuf,
+    pub last_updated: SystemTime,
+    pub download_path: Option<PathBuf>,
+    pub download_time: Option<SystemTime>,
 
     #[serde(skip)]
     pub resource: Option<Resource>,
@@ -68,10 +72,28 @@ pub enum ResourceMessage {
 }
 
 impl ResourceState {
+    pub fn empty() -> Self {
+        ResourceState {
+            module_id: "".to_string(),
+            path: PathBuf::new(),
+            last_updated: SystemTime::UNIX_EPOCH,
+            download_path: None,
+            download_time: None,
+            resource: None,
+            download_status: DownloadStatus::NotDownloaded,
+            open_button: button::State::new(),
+            download_button: button::State::new(),
+        }
+    }
+
     pub fn new(resource: Resource, module_id: String) -> Self {
         ResourceState {
             module_id,
             path: get_resource_path(&resource),
+            last_updated: get_resource_last_updated(&resource),
+            download_path: None,
+            download_time: None,
+
             resource: Some(resource),
             download_status: DownloadStatus::NotDownloaded,
             open_button: button::State::new(),
@@ -128,5 +150,15 @@ fn get_resource_path(resource: &Resource) -> PathBuf {
         Resource::InternalVideo(resource) => resource.path().to_path_buf(),
         Resource::ExternalVideo(resource) => resource.path().to_path_buf(),
         Resource::WebLectureVideo(resource) => resource.path().to_path_buf(),
+    }
+}
+
+fn get_resource_last_updated(resource: &Resource) -> SystemTime {
+    match &resource {
+        Resource::File(resource) => resource.last_updated(),
+        Resource::ZoomRecording(resource) => resource.last_updated(),
+        Resource::InternalVideo(resource) => resource.last_updated(),
+        Resource::ExternalVideo(resource) => resource.last_updated(),
+        Resource::WebLectureVideo(resource) => resource.last_updated(),
     }
 }

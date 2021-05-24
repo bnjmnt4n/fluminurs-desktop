@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use crate::data::DataItems;
@@ -52,7 +53,9 @@ pub fn merge_modules(modules: &mut DataItems<Module>, mut new: DataItems<Module>
             }
         });
 
-    modules.items.retain(|module| module.last_updated != SystemTime::UNIX_EPOCH);
+    modules
+        .items
+        .retain(|module| module.last_updated != SystemTime::UNIX_EPOCH);
 }
 
 pub fn merge_resources(
@@ -64,4 +67,35 @@ pub fn merge_resources(
     resources.last_updated = new.last_updated;
     resources.fetch_status = new.fetch_status;
     resources.items.append(&mut new.items);
+
+    // Sort by module ID, followed by path and last updated time.
+    resources.items.sort_unstable_by(|m1, m2| {
+        m1.module_id
+            .cmp(&m2.module_id)
+            .then_with(|| m1.path.cmp(&m2.path))
+            .then_with(|| m1.last_updated.cmp(&m2.last_updated))
+            .then_with(|| m1.last_updated.cmp(&m2.last_updated))
+    });
+
+    resources
+        .items
+        .iter_mut()
+        .fold(&mut ResourceState::empty(), |prev, curr| {
+            // We keep the older resource, since it would contain our persisted information
+            // about download path and time, and update its last updated timing from the new
+            // resource.
+            if prev.module_id == curr.module_id && prev.path == curr.path {
+                curr.path = PathBuf::new();
+                std::mem::swap(&mut prev.last_updated, &mut curr.last_updated);
+                std::mem::swap(&mut prev.resource, &mut curr.resource);
+
+                prev
+            } else {
+                curr
+            }
+        });
+
+    resources
+        .items
+        .retain(|resource| !resource.path.as_os_str().is_empty());
 }

@@ -124,7 +124,6 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 
                     Command::perform(
                         async move {
-                            let api = api;
                             // TODO: don't hardcode
                             api::load_modules(&api, Some("2020".to_owned()), last_updated).await
                         },
