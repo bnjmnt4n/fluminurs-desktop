@@ -26,6 +26,19 @@ pub enum ModuleMessage {
 }
 
 impl Module {
+    pub fn empty() -> Self {
+        Module {
+            id: "".to_string(),
+            code: "".to_string(),
+            name: "".to_string(),
+            term: "".to_string(),
+            is_taking: false,
+            is_teaching: false,
+            last_updated: SystemTime::UNIX_EPOCH,
+            internal_module: None,
+        }
+    }
+
     pub fn new(module: FluminursModule, last_updated: SystemTime) -> Self {
         Module {
             id: module.id.to_string(),
