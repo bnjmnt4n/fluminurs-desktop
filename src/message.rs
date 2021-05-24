@@ -85,6 +85,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         Message::SettingsSaved(message) => match message {
             Ok(StorageWrite::Successful) => {
                 println!("Saved settings");
+                state.settings.mark_saving(false);
                 Command::none()
             }
             Ok(StorageWrite::Retry) => {

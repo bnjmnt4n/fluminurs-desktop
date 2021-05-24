@@ -51,16 +51,11 @@ impl Storage for Settings {
         path
     }
 
-    fn is_dirty(&self) -> bool {
-        self.dirty
+    fn get_dirty(&mut self) -> &mut bool {
+        &mut self.dirty
     }
 
-    fn is_saving(&self) -> bool {
-        self.saving
-    }
-
-    fn mark_saving(&mut self) {
-        self.dirty = false;
-        self.saving = true;
+    fn get_saving(&mut self) -> &mut bool {
+        &mut self.saving
     }
 }
