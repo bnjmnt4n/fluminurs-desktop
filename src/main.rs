@@ -12,6 +12,7 @@ mod module;
 mod pages;
 mod resource;
 mod settings;
+mod storage;
 mod utils;
 
 use crate::data::Data;
@@ -21,6 +22,7 @@ use crate::module::Module;
 use crate::pages::{Page, Pages};
 use crate::resource::ResourceType;
 use crate::settings::Settings as FluminursDesktopSettings;
+use crate::storage::Storage;
 
 pub fn main() -> iced::Result {
     FluminursDesktop::run(Settings::default())

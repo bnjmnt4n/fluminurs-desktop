@@ -15,6 +15,7 @@ use crate::pages::resources::{ResourcesMessage, ResourcesPage};
 use crate::pages::Page;
 use crate::resource::{DownloadStatus, ResourceMessage, ResourceState, ResourceType};
 use crate::settings::Settings;
+use crate::storage::{Storage, StorageWrite};
 use crate::utils::{construct_modules_map, merge_modules, merge_resources};
 use crate::Error;
 use crate::FluminursDesktop;
@@ -29,7 +30,7 @@ pub enum Message {
     SwitchPage(Page),
 
     SettingsLoaded(Result<Settings, Error>),
-    SettingsSaved(Result<(), Error>),
+    SettingsSaved(Result<StorageWrite, Error>),
     LoadedAPI(Result<(Api, String, String, String, DataItems<Module>), Error>),
     LoadModules(()),
     LoadedModules(Result<DataItems<Module>, Error>),
@@ -82,8 +83,16 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             Err(_) => Command::none(),
         },
         Message::SettingsSaved(message) => match message {
-            Ok(()) => {
+            Ok(StorageWrite::Successful) => {
                 println!("Saved settings");
+                Command::none()
+            }
+            Ok(StorageWrite::Retry) => {
+                println!("Retrying settings save");
+                Command::perform(state.settings.save(), Message::SettingsSaved)
+            }
+            Ok(StorageWrite::Unnecessary) => {
+                println!("No need to write settings");
                 Command::none()
             }
             // TODO
@@ -105,7 +114,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 state.settings.set_login_details(username, password);
 
                 Command::batch(vec![
-                    Command::perform(state.settings.clone().save(), Message::SettingsSaved),
+                    Command::perform(state.settings.save(), Message::SettingsSaved),
                     Command::perform(async { ResourceType::File }, Message::LoadResources),
                     Command::perform(async { ResourceType::Multimedia }, Message::LoadResources),
                     Command::perform(async { ResourceType::Weblecture }, Message::LoadResources),
