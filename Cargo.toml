@@ -9,6 +9,7 @@ readme = "README.md"
 license = "MIT"
 
 [dependencies]
+chrono = "0.4"
 fluminurs = { git = "https://github.com/bnjmnt4n/fluminurs", branch = "desktop" }
 futures-util = "0.3"
 iced = { version = "0.3", features = ["tokio"] }

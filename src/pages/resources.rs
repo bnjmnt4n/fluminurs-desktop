@@ -5,6 +5,9 @@ use iced::{
     button, scrollable, Button, Column, Command, Container, Element, Length, Scrollable, Text,
 };
 
+use chrono::offset::Utc;
+use chrono::DateTime;
+
 use crate::data::{DataItems, FetchStatus};
 use crate::message::Message;
 use crate::module::Module;
@@ -91,10 +94,15 @@ impl ResourcesPage {
                 .on_press(ResourcesMessage::Refresh),
         };
 
+        let last_updated: DateTime<Utc> = data.last_updated.into();
+        let last_updated = last_updated.format("%d/%m/%Y %T");
+        let last_updated = Text::new(format!("Last updated at {}", last_updated));
+
         let content = Column::new()
             .max_width(800)
             .spacing(20)
             .push(refresh_button)
+            .push(last_updated)
             .push(files);
 
         let scrollable =
