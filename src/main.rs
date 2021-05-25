@@ -2,21 +2,29 @@ use std::collections::HashMap;
 
 use iced::{executor, Application, Clipboard, Column, Command, Element, Settings};
 
-use fluminurs::{module::Module, Api};
+use futures_util::future;
+
+use fluminurs::Api;
 
 mod api;
+mod data;
 mod header;
 mod message;
+mod module;
 mod pages;
 mod resource;
 mod settings;
+mod storage;
 mod utils;
 
+use crate::data::Data;
 use crate::header::Header;
 use crate::message::{handle_message, Message};
+use crate::module::Module;
 use crate::pages::{Page, Pages};
-use crate::resource::{ResourceState, ResourceType};
+use crate::resource::ResourceType;
 use crate::settings::Settings as FluminursDesktopSettings;
+use crate::storage::Storage;
 
 pub fn main() -> iced::Result {
     FluminursDesktop::run(Settings::default())
@@ -25,12 +33,8 @@ pub fn main() -> iced::Result {
 pub struct FluminursDesktop {
     api: Option<Api>,
     settings: FluminursDesktopSettings,
-    modules: Option<Vec<Module>>,
+    data: Data,
     modules_map: HashMap<String, Module>,
-    files: Option<Vec<ResourceState>>,
-    multimedia: Option<Vec<ResourceState>>,
-    weblectures: Option<Vec<ResourceState>>,
-    conferences: Option<Vec<ResourceState>>,
     name: Option<String>,
     current_page: Page,
     pages: Pages,
@@ -46,12 +50,8 @@ impl FluminursDesktop {
             api: None,
             settings: FluminursDesktopSettings::default(),
             name: None,
-            modules: None,
+            data: Data::default(),
             modules_map: HashMap::new(),
-            files: None,
-            multimedia: None,
-            weblectures: None,
-            conferences: None,
             current_page: Page::Login,
             pages: Pages::default(),
             header: Header::default(),
@@ -67,7 +67,14 @@ impl Application for FluminursDesktop {
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
         (
             Self::default(),
-            Command::perform(FluminursDesktopSettings::load(), Message::SettingsLoaded),
+            Command::perform(
+                async {
+                    let (settings, data) =
+                        future::join(FluminursDesktopSettings::load(), Data::load()).await;
+                    (settings, data)
+                },
+                Message::Startup,
+            ),
         )
     }
 
@@ -103,27 +110,27 @@ impl Application for FluminursDesktop {
             Page::Modules => self
                 .pages
                 .modules
-                .view(&self.modules)
+                .view(&self.data.modules)
                 .map(Message::ModulesPage),
             Page::Files => self
                 .pages
                 .files
-                .view(&mut self.files, &self.modules_map)
+                .view(&mut self.data.files, &self.modules_map)
                 .map(|message| Message::ResourcesPage((ResourceType::File, message))),
             Page::Multimedia => self
                 .pages
                 .multimedia
-                .view(&mut self.multimedia, &self.modules_map)
+                .view(&mut self.data.multimedia, &self.modules_map)
                 .map(|message| Message::ResourcesPage((ResourceType::Multimedia, message))),
             Page::Weblectures => self
                 .pages
                 .weblectures
-                .view(&mut self.weblectures, &self.modules_map)
+                .view(&mut self.data.weblectures, &self.modules_map)
                 .map(|message| Message::ResourcesPage((ResourceType::Weblecture, message))),
             Page::Conferences => self
                 .pages
                 .conferences
-                .view(&mut self.conferences, &self.modules_map)
+                .view(&mut self.data.conferences, &self.modules_map)
                 .map(|message| Message::ResourcesPage((ResourceType::Conference, message))),
         };
 

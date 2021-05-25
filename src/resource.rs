@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use iced::{button, Align, Button, Element, Length, Row, Text};
 
-use fluminurs::module::Module;
+use serde::{Deserialize, Serialize};
+
 use fluminurs::resource::Resource as FluminursResource;
 use fluminurs::{
     conferencing::ZoomRecording,
@@ -12,14 +14,24 @@ use fluminurs::{
     weblecture::WebLectureVideo,
 };
 
-#[derive(Debug)]
+use crate::data::FetchStatus;
+use crate::module::Module;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceState {
     pub module_id: String,
     pub path: PathBuf,
+    pub last_updated: SystemTime,
+    pub download_path: Option<PathBuf>,
+    pub download_time: Option<SystemTime>,
 
-    pub resource: Resource,
-    pub download_status: DownloadStatus,
+    #[serde(skip)]
+    pub resource: Option<Resource>,
+    #[serde(skip)]
+    pub download_status: FetchStatus,
+    #[serde(skip)]
     open_button: button::State,
+    #[serde(skip)]
     download_button: button::State,
 }
 
@@ -40,13 +52,6 @@ pub enum Resource {
     ZoomRecording(ZoomRecording),
 }
 
-#[derive(Debug)]
-pub enum DownloadStatus {
-    Downloaded,
-    Downloading,
-    NotDownloaded,
-}
-
 #[derive(Debug, Clone)]
 pub enum ResourceMessage {
     OpenResource,
@@ -54,51 +59,94 @@ pub enum ResourceMessage {
 }
 
 impl ResourceState {
-    pub fn new(resource: Resource, module_id: String) -> Self {
+    pub fn empty() -> Self {
         ResourceState {
-            module_id,
-            path: get_resource_path(&resource),
-            resource,
-            download_status: DownloadStatus::NotDownloaded,
+            module_id: "".to_string(),
+            path: PathBuf::new(),
+            last_updated: SystemTime::UNIX_EPOCH,
+            download_path: None,
+            download_time: None,
+            resource: None,
+            download_status: FetchStatus::Idle,
             open_button: button::State::new(),
             download_button: button::State::new(),
         }
     }
 
-    pub fn local_resource_path(&self, modules_map: &HashMap<String, Module>) -> PathBuf {
+    pub fn new(resource: Resource, module_id: String) -> Self {
+        ResourceState {
+            module_id,
+            path: get_resource_path(&resource),
+            last_updated: get_resource_last_updated(&resource),
+            download_path: None,
+            download_time: None,
+
+            resource: Some(resource),
+            download_status: FetchStatus::Idle,
+            open_button: button::State::new(),
+            download_button: button::State::new(),
+        }
+    }
+
+    pub fn local_resource_path(
+        &self,
+        modules_map: &HashMap<String, Module>,
+        resource_type: ResourceType,
+    ) -> PathBuf {
         Path::new(match modules_map.get(&self.module_id) {
             Some(module) => module.code.as_ref(),
             None => "Unknown",
         })
         .join(Path::new(match &self.resource {
-            Resource::File(_) => "Files",
-            Resource::InternalVideo(_) => "Multimedia",
-            Resource::ExternalVideo(_) => "Multimedia",
-            Resource::WebLectureVideo(_) => "Weblectures",
-            Resource::ZoomRecording(_) => "Conferences",
+            Some(Resource::File(_)) => "Files",
+            Some(Resource::InternalVideo(_)) => "Multimedia",
+            Some(Resource::ExternalVideo(_)) => "Multimedia",
+            Some(Resource::WebLectureVideo(_)) => "Weblectures",
+            Some(Resource::ZoomRecording(_)) => "Conferences",
+            None => match resource_type {
+                ResourceType::File => "Files",
+                ResourceType::Multimedia => "Multimedia",
+                ResourceType::Weblecture => "Weblectures",
+                ResourceType::Conference => "Conferences",
+            },
         }))
         .join(self.path.clone())
     }
 
-    pub fn view(&mut self, modules_map: &HashMap<String, Module>) -> Element<ResourceMessage> {
+    pub fn view(
+        &mut self,
+        modules_map: &HashMap<String, Module>,
+        resource_type: ResourceType,
+    ) -> Element<ResourceMessage> {
         let content = Row::new()
             .height(Length::Units(30))
             .align_items(Align::Center)
             .max_width(800)
             .spacing(20)
             .push(Text::new(
-                self.local_resource_path(modules_map).display().to_string(),
+                self.local_resource_path(modules_map, resource_type)
+                    .display()
+                    .to_string(),
             ));
 
+        let content = if let Some(_) = self.download_path {
+            content.push(
+                Button::new(&mut self.open_button, Text::new("Open"))
+                    .on_press(ResourceMessage::OpenResource),
+            )
+        } else {
+            content
+        };
+
         let download_content: Element<_> = match self.download_status {
-            DownloadStatus::Downloading => Text::new("Downloading…").into(),
-            DownloadStatus::NotDownloaded => {
-                Button::new(&mut self.download_button, Text::new("Download"))
-                    .on_press(ResourceMessage::DownloadResource)
-                    .into()
+            FetchStatus::Fetching => {
+                Button::new(&mut self.download_button, Text::new("Downloading…")).into()
             }
-            DownloadStatus::Downloaded => Button::new(&mut self.open_button, Text::new("Open"))
-                .on_press(ResourceMessage::OpenResource)
+            FetchStatus::Idle => Button::new(&mut self.download_button, Text::new("Download"))
+                .on_press(ResourceMessage::DownloadResource)
+                .into(),
+            FetchStatus::Error => Button::new(&mut self.download_button, Text::new("Error…"))
+                .on_press(ResourceMessage::DownloadResource)
                 .into(),
         };
 
@@ -113,5 +161,15 @@ fn get_resource_path(resource: &Resource) -> PathBuf {
         Resource::InternalVideo(resource) => resource.path().to_path_buf(),
         Resource::ExternalVideo(resource) => resource.path().to_path_buf(),
         Resource::WebLectureVideo(resource) => resource.path().to_path_buf(),
+    }
+}
+
+fn get_resource_last_updated(resource: &Resource) -> SystemTime {
+    match &resource {
+        Resource::File(resource) => resource.last_updated(),
+        Resource::ZoomRecording(resource) => resource.last_updated(),
+        Resource::InternalVideo(resource) => resource.last_updated(),
+        Resource::ExternalVideo(resource) => resource.last_updated(),
+        Resource::WebLectureVideo(resource) => resource.last_updated(),
     }
 }
