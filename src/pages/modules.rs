@@ -44,18 +44,11 @@ impl ModulesPage {
                 .on_press(ModuleMessage::RefreshModules),
         };
 
-        let content = Column::new()
-            .max_width(800)
-            .spacing(20)
-            .push(refresh_button)
-            .push(modules);
+        let content = Column::new().spacing(20).push(refresh_button).push(modules);
 
         let scrollable =
             Scrollable::new(&mut self.scroll).push(Container::new(content).width(Length::Fill));
 
-        Container::new(scrollable)
-            .height(Length::Fill)
-            .center_y()
-            .into()
+        Container::new(scrollable).height(Length::Fill).into()
     }
 }

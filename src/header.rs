@@ -40,7 +40,6 @@ impl Header {
 
     pub fn view(&mut self, name: &Option<String>, active_page: &Page) -> Element<HeaderMessage> {
         let content = Row::new()
-            .max_width(800)
             .push(create_button(
                 &mut self.modules_button,
                 Page::Modules,

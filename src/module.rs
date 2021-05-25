@@ -55,7 +55,6 @@ impl Module {
     pub fn view(&self) -> Element<ModuleMessage> {
         Row::new()
             .height(Length::Units(30))
-            .max_width(800)
             .spacing(20)
             .push(Text::new(format!("{} {}", self.code, self.name)))
             .into()

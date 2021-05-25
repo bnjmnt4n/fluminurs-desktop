@@ -140,12 +140,7 @@ impl Application for FluminursDesktop {
                 .view(&self.name, &self.current_page)
                 .map(Message::Header);
 
-            Column::new()
-                .max_width(800)
-                .spacing(20)
-                .push(header)
-                .push(page)
-                .into()
+            Column::new().spacing(20).push(header).push(page).into()
         } else {
             page
         }

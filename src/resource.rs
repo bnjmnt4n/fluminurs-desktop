@@ -121,7 +121,6 @@ impl ResourceState {
         let content = Row::new()
             .height(Length::Units(30))
             .align_items(Align::Center)
-            .max_width(800)
             .spacing(20)
             .push(Text::new(
                 self.local_resource_path(modules_map, resource_type)

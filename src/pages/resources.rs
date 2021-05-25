@@ -99,7 +99,6 @@ impl ResourcesPage {
         let last_updated = Text::new(format!("Last updated at {}", last_updated));
 
         let content = Column::new()
-            .max_width(800)
             .spacing(20)
             .push(refresh_button)
             .push(last_updated)
@@ -108,9 +107,6 @@ impl ResourcesPage {
         let scrollable =
             Scrollable::new(&mut self.scroll).push(Container::new(content).width(Length::Fill));
 
-        Container::new(scrollable)
-            .height(Length::Fill)
-            .center_y()
-            .into()
+        Container::new(scrollable).height(Length::Fill).into()
     }
 }
