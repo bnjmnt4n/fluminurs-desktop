@@ -288,7 +288,8 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                                     Some(resource) => {
                                         let resource = resource.clone();
                                         let path = file.path.clone();
-                                        let download_path = file.local_resource_path(&modules_map);
+                                        let download_path =
+                                            file.local_resource_path(&modules_map, resource_type);
 
                                         Command::perform(
                                             async move {

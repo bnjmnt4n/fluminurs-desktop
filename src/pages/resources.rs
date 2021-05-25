@@ -63,7 +63,7 @@ impl ResourcesPage {
                     let resource_type = self.resource_type;
                     let resource_module_id = file.module_id.clone();
                     let resource_path = file.path.clone();
-                    column.push(file.view(modules_map).map(move |message| {
+                    column.push(file.view(modules_map, resource_type).map(move |message| {
                         ResourcesMessage::ResourceMessage(
                             resource_type,
                             resource_module_id.clone(),

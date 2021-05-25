@@ -88,7 +88,11 @@ impl ResourceState {
         }
     }
 
-    pub fn local_resource_path(&self, modules_map: &HashMap<String, Module>) -> PathBuf {
+    pub fn local_resource_path(
+        &self,
+        modules_map: &HashMap<String, Module>,
+        resource_type: ResourceType,
+    ) -> PathBuf {
         Path::new(match modules_map.get(&self.module_id) {
             Some(module) => module.code.as_ref(),
             None => "Unknown",
@@ -99,19 +103,30 @@ impl ResourceState {
             Some(Resource::ExternalVideo(_)) => "Multimedia",
             Some(Resource::WebLectureVideo(_)) => "Weblectures",
             Some(Resource::ZoomRecording(_)) => "Conferences",
-            None => "None",
+            None => match resource_type {
+                ResourceType::File => "Files",
+                ResourceType::Multimedia => "Multimedia",
+                ResourceType::Weblecture => "Weblectures",
+                ResourceType::Conference => "Conferences",
+            },
         }))
         .join(self.path.clone())
     }
 
-    pub fn view(&mut self, modules_map: &HashMap<String, Module>) -> Element<ResourceMessage> {
+    pub fn view(
+        &mut self,
+        modules_map: &HashMap<String, Module>,
+        resource_type: ResourceType,
+    ) -> Element<ResourceMessage> {
         let content = Row::new()
             .height(Length::Units(30))
             .align_items(Align::Center)
             .max_width(800)
             .spacing(20)
             .push(Text::new(
-                self.local_resource_path(modules_map).display().to_string(),
+                self.local_resource_path(modules_map, resource_type)
+                    .display()
+                    .to_string(),
             ));
 
         let content = if let Some(_) = self.download_path {
@@ -124,7 +139,9 @@ impl ResourceState {
         };
 
         let download_content: Element<_> = match self.download_status {
-            FetchStatus::Fetching => Text::new("Downloading…").into(),
+            FetchStatus::Fetching => {
+                Button::new(&mut self.download_button, Text::new("Downloading…")).into()
+            }
             FetchStatus::Idle => Button::new(&mut self.download_button, Text::new("Download"))
                 .on_press(ResourceMessage::DownloadResource)
                 .into(),

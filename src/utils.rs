@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::SystemTime;
+use std::{cmp::Ordering, collections::HashMap};
 
 use crate::data::DataItems;
 use crate::module::Module;
@@ -68,13 +68,22 @@ pub fn merge_resources(
     resources.fetch_status = new.fetch_status;
     resources.items.append(&mut new.items);
 
-    // Sort by module ID, followed by path and last updated time.
+    // Sort by module ID, followed by path, last updated time and whether there is a
+    // local download.
     resources.items.sort_unstable_by(|m1, m2| {
         m1.module_id
             .cmp(&m2.module_id)
             .then_with(|| m1.path.cmp(&m2.path))
             .then_with(|| m1.last_updated.cmp(&m2.last_updated))
-            .then_with(|| m1.last_updated.cmp(&m2.last_updated))
+            .then_with(|| {
+                if let Some(_) = m1.download_path {
+                    Ordering::Less
+                } else if let Some(_) = m2.download_path {
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            })
     });
 
     resources
@@ -87,7 +96,10 @@ pub fn merge_resources(
             if prev.module_id == curr.module_id && prev.path == curr.path {
                 curr.path = PathBuf::new();
                 std::mem::swap(&mut prev.last_updated, &mut curr.last_updated);
-                std::mem::swap(&mut prev.resource, &mut curr.resource);
+
+                if let Some(_) = curr.resource {
+                    std::mem::swap(&mut prev.resource, &mut curr.resource);
+                }
 
                 prev
             } else {
