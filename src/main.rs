@@ -35,7 +35,6 @@ pub struct FluminursDesktop {
     settings: FluminursDesktopSettings,
     data: Data,
     modules_map: HashMap<String, Module>,
-    name: Option<String>,
     current_page: Page,
     pages: Pages,
     header: Header,
@@ -49,7 +48,6 @@ impl FluminursDesktop {
         FluminursDesktop {
             api: None,
             settings: FluminursDesktopSettings::default(),
-            name: None,
             data: Data::default(),
             modules_map: HashMap::new(),
             current_page: Page::Login,
@@ -68,11 +66,7 @@ impl Application for FluminursDesktop {
         (
             Self::default(),
             Command::perform(
-                async {
-                    let (settings, data) =
-                        future::join(FluminursDesktopSettings::load(), Data::load()).await;
-                    (settings, data)
-                },
+                async { future::join(FluminursDesktopSettings::load(), Data::load()).await },
                 Message::Startup,
             ),
         )
@@ -135,10 +129,7 @@ impl Application for FluminursDesktop {
         };
 
         if display_header {
-            let header = self
-                .header
-                .view(&self.name, &self.current_page)
-                .map(Message::Header);
+            let header = self.header.view(&self.current_page).map(Message::Header);
 
             Column::new().spacing(20).push(header).push(page).into()
         } else {

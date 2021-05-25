@@ -32,7 +32,7 @@ pub enum Message {
     Startup((Result<Settings, Error>, Result<Data, Error>)),
     SettingsSaved(Result<StorageWrite, Error>),
     DataSaved(Result<StorageWrite, Error>),
-    LoadedAPI(Result<(Api, String, String, String, DataItems<Module>), Error>),
+    LoadedAPI(Result<(Api, String, String, DataItems<Module>), Error>),
     LoadModules(()),
     LoadedModules(Result<DataItems<Module>, Error>),
     LoadResources(ResourceType),
@@ -131,8 +131,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 
         // After we've successfully logged in, fetch all resources.
         Message::LoadedAPI(result) => match result {
-            Ok((api, username, password, name, modules)) => {
-                state.name = Some(name);
+            Ok((api, username, password, modules)) => {
                 state.api = Some(api);
                 merge_modules(&mut state.data.modules, modules);
                 state.data.mark_dirty();

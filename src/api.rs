@@ -18,19 +18,17 @@ use crate::Error;
 pub async fn login(
     username: String,
     password: String,
-) -> Result<(Api, String, String, String, DataItems<Module>), Error> {
+) -> Result<(Api, String, String, DataItems<Module>), Error> {
     let api = Api::with_login(&username, &password)
         .await
         .map_err(|_| Error {})?
         // TODO: custom ffmpeg location
         .with_ffmpeg("ffmpeg".to_owned());
 
-    let name = api.name().await.map_err(|_| Error {})?;
-
     // TODO: no hardcode!
     let modules = load_modules(&api, Some("2010".to_string()), SystemTime::now()).await?;
 
-    Ok((api, username, password, name, modules))
+    Ok((api, username, password, modules))
 }
 
 // TODO: reduce code duplication with fluminurs

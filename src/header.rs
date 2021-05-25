@@ -1,6 +1,4 @@
-use iced::{
-    button, Button, Column, Command, Element, Length, Row, Rule, Space, Text, VerticalAlignment,
-};
+use iced::{button, Button, Column, Command, Element, Row, Rule, Text};
 
 use crate::message::Message;
 use crate::pages::Page;
@@ -38,7 +36,7 @@ impl Header {
         }
     }
 
-    pub fn view(&mut self, name: &Option<String>, active_page: &Page) -> Element<HeaderMessage> {
+    pub fn view(&mut self, active_page: &Page) -> Element<HeaderMessage> {
         let content = Row::new()
             .push(create_button(
                 &mut self.modules_button,
@@ -70,18 +68,6 @@ impl Header {
                 "Conferences",
                 active_page,
             ));
-
-        let content = if let Some(name) = name {
-            content
-                .push(Space::with_width(Length::FillPortion(7)))
-                .push(
-                    Text::new(name)
-                        .vertical_alignment(VerticalAlignment::Bottom)
-                        .height(Length::Units(25)),
-                )
-        } else {
-            content
-        };
 
         Column::new()
             .push(content)
