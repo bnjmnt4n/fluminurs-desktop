@@ -46,13 +46,9 @@ pub trait Storage: Debug + Clone + Serialize + DeserializeOwned + Send {
             .map_err(|_| Error {})?;
 
         if let Ok(settings) = serde_json::from_str(&contents) {
-            println!("Read file");
             Ok(settings)
         } else {
-            println!("Corrupt information, deleting file...");
-            tokio::fs::remove_file(Self::path())
-                .await
-                .map_err(|_| Error {})?;
+            println!("Corrupt file found");
             Err(Error {})
         }
     }
@@ -63,7 +59,6 @@ pub trait Storage: Debug + Clone + Serialize + DeserializeOwned + Send {
     {
         let dirty = self.is_dirty();
         if dirty && !self.is_saving() {
-            println!("Saving");
             self.mark_saving(true);
             let to_save = self.clone();
 
@@ -76,7 +71,7 @@ pub trait Storage: Debug + Clone + Serialize + DeserializeOwned + Send {
     }
 
     async fn save_internal(self) -> Result<StorageWrite, Error> {
-        let json = serde_json::to_string_pretty(&self).map_err(|_| Error {})?;
+        let json = serde_json::to_string(&self).map_err(|_| Error {})?;
 
         tokio::fs::write(Self::path(), json)
             .await

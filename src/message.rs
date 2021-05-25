@@ -103,10 +103,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 println!("Retrying settings save");
                 Command::perform(state.settings.save(), Message::SettingsSaved)
             }
-            Ok(StorageWrite::Unnecessary) => {
-                println!("No need to write settings");
-                Command::none()
-            }
+            Ok(StorageWrite::Unnecessary) => Command::none(),
             // TODO
             Err(_) => {
                 println!("Failed to save settings");
@@ -124,16 +121,14 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 println!("Retrying data save");
                 Command::perform(state.data.save(), Message::DataSaved)
             }
-            Ok(StorageWrite::Unnecessary) => {
-                println!("No need to write data");
-                Command::none()
-            }
+            Ok(StorageWrite::Unnecessary) => Command::none(),
             // TODO
             Err(_) => {
                 println!("Failed to save data");
                 Command::none()
             }
         },
+
         // After we've successfully logged in, fetch all resources.
         Message::LoadedAPI(result) => match result {
             Ok((api, username, password, name, modules)) => {
