@@ -6,6 +6,7 @@ use iced::{
 use crate::api;
 use crate::message::Message;
 use crate::utils::clean_username;
+use crate::pages::Page;
 
 #[derive(Debug, Clone)]
 pub struct LoginPage {
@@ -14,6 +15,7 @@ pub struct LoginPage {
     username_input: text_input::State,
     password_input: text_input::State,
     login_button: button::State,
+    cancel_button: button::State,
     login_state: LoginState,
 }
 
@@ -23,6 +25,7 @@ pub enum LoginMessage {
     PasswordEdited(String),
     Submit,
     Failed,
+    Cancel,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +43,7 @@ impl LoginPage {
             username_input: text_input::State::new(),
             password_input: text_input::State::new(),
             login_button: button::State::new(),
+            cancel_button: button::State::new(),
             login_state: LoginState::Initial,
         }
     }
@@ -65,16 +69,25 @@ impl LoginPage {
                 self.login_state = LoginState::Error;
                 Command::none()
             }
+            // Go back to settings page if login is cancelled
+            // TODO: store previous page?
+            LoginMessage::Cancel => {
+                Command::perform(
+                    async { Page::Settings },
+                    Message::SwitchPage,
+                )
+            }
         }
     }
 
-    pub fn view(&mut self) -> Element<LoginMessage> {
+    pub fn view(&mut self, cancelable: bool) -> Element<LoginMessage> {
         let LoginPage {
             username,
             password,
             username_input,
             password_input,
             login_button,
+            cancel_button,
             login_state,
         } = self;
 
@@ -134,6 +147,15 @@ impl LoginPage {
             .push(username_input.style(style::TextInput::UsernameInput))
             .push(password_input.style(style::TextInput::UsernameInput))
             .push(login_button);
+
+        let content = if cancelable {
+            content.push(
+                Button::new(cancel_button, Text::new("Cancel"))
+                    .on_press(LoginMessage::Cancel)
+            )
+        } else {
+            content
+        };
 
         Container::new(content)
             .width(Length::Fill)

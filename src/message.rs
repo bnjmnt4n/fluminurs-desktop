@@ -12,11 +12,12 @@ use crate::module::{Module, ModuleMessage};
 use crate::pages::loading::LoadingMessage;
 use crate::pages::login::LoginMessage;
 use crate::pages::resources::{ResourcesMessage, ResourcesPage};
+use crate::pages::settings::SettingsMessage;
 use crate::pages::Page;
 use crate::resource::{ResourceMessage, ResourceState, ResourceType};
 use crate::settings::Settings;
 use crate::storage::{Storage, StorageWrite};
-use crate::utils::{construct_modules_map, merge_modules, merge_resources};
+use crate::utils::{clean_username, construct_modules_map, merge_modules, merge_resources};
 use crate::Error;
 use crate::FluminursDesktop;
 
@@ -24,6 +25,7 @@ use crate::FluminursDesktop;
 pub enum Message {
     LoadingPage(LoadingMessage),
     LoginPage(LoginMessage),
+    SettingsPage(SettingsMessage),
     ModulesPage(ModuleMessage),
     ResourcesPage((ResourceType, ResourcesMessage)),
     Header(HeaderMessage),
@@ -48,6 +50,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         // be handled by each individual page/component.
         Message::LoadingPage(message) => state.pages.loading.update(message),
         Message::LoginPage(message) => state.pages.login.update(message),
+        Message::SettingsPage(message) => state.pages.settings.update(message),
         Message::ModulesPage(message) => state.pages.modules.update(message),
         Message::ResourcesPage((resource_type, message)) => {
             get_resources_page(state, resource_type).update(message)
@@ -60,37 +63,66 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             Command::none()
         }
 
-        // TODO: handle startup
         Message::Startup((settings, data)) => {
+            // Once local data exists, skip the login page and display it directly.
+            let has_data = match data {
+                Ok(data) => {
+                    state.data = data;
+                    state.current_page = Page::Modules;
+
+                    true
+                }
+                Err(_) => false,
+            };
+
             match settings {
                 Ok(settings) => {
                     state.settings = settings;
-                    state.current_page = Page::Login;
 
-                    if let Some(username) = state.settings.get_username() {
+                    let has_username = if let Some(username) = state.settings.get_username() {
                         state
                             .pages
                             .login
                             .update(LoginMessage::UsernameEdited(username.to_string()));
-                    }
-                    if let Some(password) = state.settings.get_password() {
+
+                        true
+                    } else {
+                        false
+                    };
+                    let has_password = if let Some(password) = state.settings.get_password() {
                         state
                             .pages
                             .login
                             .update(LoginMessage::PasswordEdited(password.to_string()));
+
+                        true
+                    } else {
+                        false
+                    };
+
+                    if !has_data {
+                        state.current_page = Page::Login;
+                        Command::none()
+                    } else if has_username && has_password {
+                        Command::perform(
+                            api::login(
+                                clean_username(&state.settings.get_username().as_ref().unwrap()),
+                                state
+                                    .settings
+                                    .get_password()
+                                    .as_ref()
+                                    .cloned()
+                                    .unwrap()
+                                    .to_string(),
+                            ),
+                            Message::LoadedAPI,
+                        )
+                    } else {
+                        Command::none()
                     }
                 }
-                Err(_) => {}
+                Err(_) => Command::none(),
             }
-
-            match data {
-                Ok(data) => {
-                    state.data = data;
-                }
-                Err(_) => {}
-            }
-
-            Command::none()
         }
 
         Message::SettingsSaved(message) => match message {
@@ -197,8 +229,8 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                             .data
                             .modules
                             .items
-                            .clone()
-                            .into_iter()
+                            .iter()
+                            .cloned()
                             .filter_map(|module| module.internal_module)
                             .collect();
                         let last_updated = SystemTime::now();

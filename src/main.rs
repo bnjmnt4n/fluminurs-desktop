@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::SystemTime;
 
 use iced::{executor, Application, Clipboard, Column, Command, Element, Settings};
 
@@ -76,6 +77,7 @@ impl Application for FluminursDesktop {
         match self.current_page {
             Page::Loading => String::from("fluminurs-desktop"),
             Page::Login => String::from("Login"),
+            Page::Settings => String::from("Settings"),
             Page::Modules => String::from("Modules"),
             Page::Files => String::from("Files"),
             Page::Multimedia => String::from("Multimedia"),
@@ -93,14 +95,14 @@ impl Application for FluminursDesktop {
     }
 
     fn view(&mut self) -> Element<Self::Message> {
-        let display_header = match self.current_page {
-            Page::Login => false,
-            _ => true,
-        };
+        let display_header = self.current_page != Page::Login;
+        let logged_in = self.api.is_some();
+        let has_data = self.data.modules.last_updated != SystemTime::UNIX_EPOCH;
 
         let page = match self.current_page {
             Page::Loading => self.pages.loading.view().map(Message::LoadingPage),
-            Page::Login => self.pages.login.view().map(Message::LoginPage),
+            Page::Login => self.pages.login.view(has_data).map(Message::LoginPage),
+            Page::Settings => self.pages.settings.view(logged_in).map(Message::SettingsPage),
             Page::Modules => self
                 .pages
                 .modules
@@ -129,7 +131,7 @@ impl Application for FluminursDesktop {
         };
 
         if display_header {
-            let header = self.header.view(&self.current_page).map(Message::Header);
+            let header = self.header.view(&self.current_page, logged_in).map(Message::Header);
 
             Column::new().spacing(20).push(header).push(page).into()
         } else {

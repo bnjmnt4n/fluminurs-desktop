@@ -10,6 +10,7 @@ pub struct Header {
     multimedia_button: button::State,
     weblectures_button: button::State,
     conferences_button: button::State,
+    settings_button: button::State,
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +26,7 @@ impl Header {
             multimedia_button: button::State::new(),
             weblectures_button: button::State::new(),
             conferences_button: button::State::new(),
+            settings_button: button::State::new(),
         }
     }
 
@@ -36,7 +38,7 @@ impl Header {
         }
     }
 
-    pub fn view(&mut self, active_page: &Page) -> Element<HeaderMessage> {
+    pub fn view(&mut self, active_page: &Page, logged_in: bool) -> Element<HeaderMessage> {
         let content = Row::new()
             .push(create_button(
                 &mut self.modules_button,
@@ -66,6 +68,13 @@ impl Header {
                 &mut self.conferences_button,
                 Page::Conferences,
                 "Conferences",
+                active_page,
+            ))
+            .push(create_button(
+                &mut self.settings_button,
+                Page::Settings,
+                // TODO: different color?
+                if logged_in {"Settings"} else {"Settings *"},
                 active_page,
             ));
 
