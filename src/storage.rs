@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::pin::Pin;
 
 use async_trait::async_trait;
-use etcetera::app_strategy::AppStrategyArgs;
+use directories::ProjectDirs;
 use futures_util::{future, Future};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json;
@@ -97,10 +97,6 @@ async fn wait() -> Result<StorageWrite, Error> {
     Ok(StorageWrite::Retry)
 }
 
-pub fn get_app_strategy_args() -> AppStrategyArgs {
-    AppStrategyArgs {
-        top_level_domain: "se".to_string(),
-        author: "ofcr".to_string(),
-        app_name: "Fluminurs Desktop".to_string(),
-    }
+pub fn get_project_dirs() -> ProjectDirs {
+    ProjectDirs::from("se", "ofcr", "Fluminurs Desktop").unwrap()
 }
