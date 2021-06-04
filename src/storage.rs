@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::pin::Pin;
 
 use async_trait::async_trait;
+use etcetera::app_strategy::AppStrategyArgs;
 use futures_util::{future, Future};
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json;
@@ -73,6 +74,12 @@ pub trait Storage: Debug + Clone + Serialize + DeserializeOwned + Send {
     async fn save_internal(self) -> Result<StorageWrite, Error> {
         let json = serde_json::to_string(&self).map_err(|_| Error {})?;
 
+        let path = Self::path();
+
+        // Ensure directory to be written to exists.
+        tokio::fs::create_dir_all(&path.parent().unwrap())
+            .await
+            .map_err(|_| Error {})?;
         tokio::fs::write(Self::path(), json)
             .await
             .map_err(|_| Error {})?;
@@ -88,4 +95,12 @@ async fn wait() -> Result<StorageWrite, Error> {
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
     Ok(StorageWrite::Retry)
+}
+
+pub fn get_app_strategy_args() -> AppStrategyArgs {
+    AppStrategyArgs {
+        top_level_domain: "se".to_string(),
+        author: "ofcr".to_string(),
+        app_name: "Fluminurs Desktop".to_string(),
+    }
 }

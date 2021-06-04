@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::module::Module;
 use crate::resource::ResourceState;
-use crate::storage::Storage;
+use crate::storage::{get_app_strategy_args, Storage};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Data {
@@ -73,11 +73,12 @@ impl Data {
 
 impl Storage for Data {
     fn path() -> PathBuf {
-        // TODO: change to default OS storage directory?
-        let mut path = std::env::current_dir().unwrap_or(PathBuf::new());
-        path.push("data.json");
+        use etcetera::app_strategy;
+        use etcetera::app_strategy::AppStrategy;
 
-        path
+        let app_strategy = app_strategy::choose_app_strategy(get_app_strategy_args()).unwrap();
+
+        app_strategy.in_data_dir("data.json")
     }
 
     fn get_dirty(&mut self) -> &mut bool {

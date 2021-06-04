@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::storage::Storage;
+use crate::storage::{get_app_strategy_args, Storage};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -44,11 +44,12 @@ impl Settings {
 
 impl Storage for Settings {
     fn path() -> PathBuf {
-        // TODO: change to default OS storage directory?
-        let mut path = std::env::current_dir().unwrap_or(PathBuf::new());
-        path.push("settings.json");
+        use etcetera::app_strategy;
+        use etcetera::app_strategy::AppStrategy;
 
-        path
+        let app_strategy = app_strategy::choose_app_strategy(get_app_strategy_args()).unwrap();
+
+        app_strategy.in_config_dir("settings.json")
     }
 
     fn get_dirty(&mut self) -> &mut bool {
