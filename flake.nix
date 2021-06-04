@@ -30,7 +30,7 @@
       nativeBuildInputs = with pkgs; [ cmake openssl pkg-config ];
       buildInputs = with pkgs; [
         openssl freetype expat vulkan-loader vulkan-tools
-        wayland wayland-protocols libxkbcommon
+        wayland wayland-protocols libxkbcommon gtk3
       ] ++ (with xorg; [
         libX11 libXcursor libXrandr libXi
       ]);

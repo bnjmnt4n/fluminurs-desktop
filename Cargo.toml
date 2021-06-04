@@ -16,6 +16,7 @@ fluminurs = { git = "https://github.com/bnjmnt4n/fluminurs", branch = "desktop" 
 futures-util = "0.3"
 iced = { version = "0.3", features = ["tokio"] }
 open = "1.7"
+rfd = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
