@@ -1,5 +1,6 @@
 use iced::{
-    button, scrollable, Align, Button, Column, Command, Container, Element, Length, Row, Scrollable, Text,
+    button, scrollable, Align, Button, Column, Command, Container, Element, Length, Row,
+    Scrollable, Text,
 };
 
 use crate::message::Message;
@@ -13,7 +14,7 @@ pub struct SettingsPage {
 
 #[derive(Debug, Clone)]
 pub enum SettingsMessage {
-    SwitchPage(Page)
+    SwitchPage(Page),
 }
 
 impl SettingsPage {
@@ -32,10 +33,7 @@ impl SettingsPage {
         }
     }
 
-    pub fn view(
-        & mut self,
-        logged_in: bool,
-    ) -> Element<SettingsMessage> {
+    pub fn view(&mut self, logged_in: bool) -> Element<SettingsMessage> {
         let login_element: Element<_> = if logged_in {
             Text::new("Logged in").into()
         } else {
@@ -46,14 +44,12 @@ impl SettingsPage {
                 .push(Text::new("Not logged in"))
                 .push(
                     Button::new(&mut self.login_button, Text::new("Login"))
-                        .on_press(SettingsMessage::SwitchPage(Page::Login))
+                        .on_press(SettingsMessage::SwitchPage(Page::Login)),
                 )
                 .into()
         };
 
-        let content = Column::new()
-            .spacing(20)
-            .push(login_element);
+        let content = Column::new().spacing(20).push(login_element);
 
         let scrollable =
             Scrollable::new(&mut self.scroll).push(Container::new(content).width(Length::Fill));

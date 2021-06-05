@@ -5,8 +5,8 @@ use iced::{
 
 use crate::api;
 use crate::message::Message;
-use crate::utils::clean_username;
 use crate::pages::Page;
+use crate::utils::clean_username;
 
 #[derive(Debug, Clone)]
 pub struct LoginPage {
@@ -71,12 +71,7 @@ impl LoginPage {
             }
             // Go back to settings page if login is cancelled
             // TODO: store previous page?
-            LoginMessage::Cancel => {
-                Command::perform(
-                    async { Page::Settings },
-                    Message::SwitchPage,
-                )
-            }
+            LoginMessage::Cancel => Command::perform(async { Page::Settings }, Message::SwitchPage),
         }
     }
 
@@ -150,8 +145,7 @@ impl LoginPage {
 
         let content = if cancelable {
             content.push(
-                Button::new(cancel_button, Text::new("Cancel"))
-                    .on_press(LoginMessage::Cancel)
+                Button::new(cancel_button, Text::new("Cancel")).on_press(LoginMessage::Cancel),
             )
         } else {
             content

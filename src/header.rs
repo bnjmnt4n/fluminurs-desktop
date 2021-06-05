@@ -74,7 +74,7 @@ impl Header {
                 &mut self.settings_button,
                 Page::Settings,
                 // TODO: different color?
-                if logged_in {"Settings"} else {"Settings *"},
+                if logged_in { "Settings" } else { "Settings *" },
                 active_page,
             ));
 

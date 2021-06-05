@@ -102,7 +102,11 @@ impl Application for FluminursDesktop {
         let page = match self.current_page {
             Page::Loading => self.pages.loading.view().map(Message::LoadingPage),
             Page::Login => self.pages.login.view(has_data).map(Message::LoginPage),
-            Page::Settings => self.pages.settings.view(logged_in).map(Message::SettingsPage),
+            Page::Settings => self
+                .pages
+                .settings
+                .view(logged_in)
+                .map(Message::SettingsPage),
             Page::Modules => self
                 .pages
                 .modules
@@ -131,7 +135,10 @@ impl Application for FluminursDesktop {
         };
 
         if display_header {
-            let header = self.header.view(&self.current_page, logged_in).map(Message::Header);
+            let header = self
+                .header
+                .view(&self.current_page, logged_in)
+                .map(Message::Header);
 
             Column::new().spacing(20).push(header).push(page).into()
         } else {
