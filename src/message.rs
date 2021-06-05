@@ -15,7 +15,7 @@ use crate::pages::resources::{ResourcesMessage, ResourcesPage};
 use crate::pages::settings::SettingsMessage;
 use crate::pages::Page;
 use crate::resource::{ResourceMessage, ResourceState, ResourceType};
-use crate::settings::Settings;
+use crate::settings::{default_download_dir, Settings};
 use crate::storage::{Storage, StorageWrite};
 use crate::utils::{clean_username, construct_modules_map, merge_modules, merge_resources};
 use crate::Error;
@@ -31,8 +31,11 @@ pub enum Message {
     Header(HeaderMessage),
     SwitchPage(Page),
 
+    // Settings
     ToggleSaveUsername(bool),
     ToggleSavePassword(bool),
+    ChangeDownloadLocation(()),
+    DownloadLocationChanged(PathBuf),
 
     Startup((Result<Settings, Error>, Result<Data, Error>)),
     SettingsSaved(Result<StorageWrite, Error>),
@@ -390,6 +393,45 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
             state.data.mark_dirty();
 
             Command::perform(state.data.save(), Message::DataSaved)
+        }
+
+        Message::ChangeDownloadLocation(()) => {
+            let curr_download_dir =
+                if let Some(download_dir) = state.settings.get_download_location() {
+                    download_dir.to_owned()
+                } else {
+                    default_download_dir()
+                };
+
+            let task = rfd::AsyncFileDialog::new()
+                .set_directory(curr_download_dir.clone())
+                .pick_folder();
+
+            Command::perform(
+                async move {
+                    let folder = task.await;
+
+                    if let Some(folder) = folder {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        folder.path().to_path_buf()
+                    } else {
+                        curr_download_dir
+                    }
+                },
+                Message::DownloadLocationChanged,
+            )
+        }
+
+        Message::DownloadLocationChanged(location) => {
+            state.settings.set_download_location(location);
+
+            Command::batch(vec![
+                Command::perform(state.settings.save(), Message::SettingsSaved),
+                Command::perform(
+                    async { SettingsMessage::DownloadLocationChanged },
+                    Message::SettingsPage,
+                ),
+            ])
         }
     }
 }

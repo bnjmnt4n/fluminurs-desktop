@@ -105,7 +105,7 @@ impl Application for FluminursDesktop {
             Page::Settings => self
                 .pages
                 .settings
-                .view(&self.settings, logged_in)
+                .view(&mut self.settings, logged_in)
                 .map(Message::SettingsPage),
             Page::Modules => self
                 .pages
