@@ -320,6 +320,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                 match api {
                     Some(api) => {
                         let modules_map = state.modules_map.clone();
+                        let download_dir = state.settings.get_download_location().clone();
                         let resources = get_resources_items(state, resource_type);
                         resources
                             .iter_mut()
@@ -338,6 +339,7 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
                                                 let result = api::download_resource(
                                                     api,
                                                     resource,
+                                                    download_dir.clone(),
                                                     download_path,
                                                     path.clone(),
                                                 )
