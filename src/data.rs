@@ -28,6 +28,8 @@ pub struct DataItems<T> {
 
     #[serde(skip)]
     pub fetch_status: FetchStatus,
+    #[serde(skip)]
+    pub download_all_status: FetchStatus,
 }
 
 impl<T> Default for DataItems<T> {
@@ -36,11 +38,12 @@ impl<T> Default for DataItems<T> {
             last_updated: SystemTime::UNIX_EPOCH,
             items: vec![],
             fetch_status: FetchStatus::default(),
+            download_all_status: FetchStatus::default(),
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum FetchStatus {
     Idle,
     Fetching,

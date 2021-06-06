@@ -17,12 +17,14 @@ use crate::resource::{ResourceMessage, ResourceState, ResourceType};
 pub struct ResourcesPage {
     resource_type: ResourceType,
     refresh_button: button::State,
+    download_all_button: button::State,
     scroll: scrollable::State,
 }
 
 #[derive(Debug, Clone)]
 pub enum ResourcesMessage {
     Refresh,
+    DownloadAll,
     ResourceMessage(ResourceType, String, PathBuf, ResourceMessage),
 }
 
@@ -31,6 +33,7 @@ impl ResourcesPage {
         ResourcesPage {
             resource_type,
             refresh_button: button::State::new(),
+            download_all_button: button::State::new(),
             scroll: scrollable::State::new(),
         }
     }
@@ -40,6 +43,10 @@ impl ResourcesPage {
             ResourcesMessage::Refresh => {
                 let resource_type = self.resource_type;
                 Command::perform(async move { resource_type }, Message::LoadResources)
+            }
+            ResourcesMessage::DownloadAll => {
+                let resource_type = self.resource_type;
+                Command::perform(async move { resource_type }, Message::DownloadAllResources)
             }
             ResourcesMessage::ResourceMessage(resource_type, module_id, path, message) => {
                 Command::perform(
@@ -88,10 +95,24 @@ impl ResourcesPage {
             Text::new(type_text).into()
         };
 
-        let refresh_button: Button<_> = match data.fetch_status {
-            FetchStatus::Fetching => Button::new(&mut self.refresh_button, Text::new("Loading…")),
-            _ => Button::new(&mut self.refresh_button, Text::new("Refresh"))
-                .on_press(ResourcesMessage::Refresh),
+        // TODO: downloading and refreshing can probably be independent.
+        let allow_download_refresh = match (data.fetch_status, data.download_all_status) {
+            (FetchStatus::Fetching, _) => false,
+            (_, FetchStatus::Fetching) => false,
+            _ => true,
+        };
+        let refresh_button: Button<_> = if allow_download_refresh {
+            Button::new(&mut self.refresh_button, Text::new("Refresh"))
+                .on_press(ResourcesMessage::Refresh)
+        } else {
+            Button::new(&mut self.refresh_button, Text::new("Loading…"))
+        };
+        let download_all_button =
+            Button::new(&mut self.download_all_button, Text::new("Download all"));
+        let download_all_button = if allow_download_refresh {
+            download_all_button.on_press(ResourcesMessage::DownloadAll)
+        } else {
+            download_all_button
         };
 
         let last_updated: DateTime<Utc> = data.last_updated.into();
@@ -101,6 +122,7 @@ impl ResourcesPage {
         let content = Column::new()
             .spacing(20)
             .push(refresh_button)
+            .push(download_all_button)
             .push(last_updated)
             .push(files);
 
