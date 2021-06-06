@@ -1,10 +1,11 @@
 use iced::{
-    button, scrollable, Align, Button, Column, Command, Container, Element, Length, Row,
+    button, scrollable, Align, Button, Checkbox, Column, Command, Container, Element, Length, Row,
     Scrollable, Text,
 };
 
 use crate::message::Message;
 use crate::pages::Page;
+use crate::settings::Settings;
 
 #[derive(Debug, Clone)]
 pub struct SettingsPage {
@@ -15,6 +16,8 @@ pub struct SettingsPage {
 #[derive(Debug, Clone)]
 pub enum SettingsMessage {
     SwitchPage(Page),
+    ToggleSaveUsername(bool),
+    ToggleSavePassword(bool),
 }
 
 impl SettingsPage {
@@ -30,10 +33,16 @@ impl SettingsPage {
             SettingsMessage::SwitchPage(page) => {
                 Command::perform(async { page }, Message::SwitchPage)
             }
+            SettingsMessage::ToggleSaveUsername(save_username) => {
+                Command::perform(async move { save_username }, Message::ToggleSaveUsername)
+            }
+            SettingsMessage::ToggleSavePassword(save_password) => {
+                Command::perform(async move { save_password }, Message::ToggleSavePassword)
+            }
         }
     }
 
-    pub fn view(&mut self, logged_in: bool) -> Element<SettingsMessage> {
+    pub fn view(&mut self, settings: &Settings, logged_in: bool) -> Element<SettingsMessage> {
         let login_element: Element<_> = if logged_in {
             Text::new("Logged in").into()
         } else {
@@ -49,7 +58,41 @@ impl SettingsPage {
                 .into()
         };
 
-        let content = Column::new().spacing(20).push(login_element);
+        let save_username_row: Element<_> = {
+            let checkbox = Checkbox::new(
+                settings.get_save_username(),
+                "Save username",
+                SettingsMessage::ToggleSaveUsername,
+            )
+            .width(Length::Fill);
+
+            Row::new()
+                .spacing(20)
+                .align_items(Align::Center)
+                .push(checkbox)
+                .into()
+        };
+
+        let save_password_row: Element<_> = {
+            let checkbox = Checkbox::new(
+                settings.get_save_password(),
+                "Save password",
+                SettingsMessage::ToggleSavePassword,
+            )
+            .width(Length::Fill);
+
+            Row::new()
+                .spacing(20)
+                .align_items(Align::Center)
+                .push(checkbox)
+                .into()
+        };
+
+        let content = Column::new()
+            .spacing(20)
+            .push(login_element)
+            .push(save_username_row)
+            .push(save_password_row);
 
         let scrollable =
             Scrollable::new(&mut self.scroll).push(Container::new(content).width(Length::Fill));
