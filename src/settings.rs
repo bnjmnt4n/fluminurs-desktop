@@ -8,6 +8,8 @@ use crate::storage::{get_project_dirs, Storage};
 pub struct Settings {
     username: Option<String>,
     password: Option<String>,
+    save_username: bool,
+    save_password: bool,
     download_location: Option<String>,
 
     #[serde(skip)]
@@ -21,6 +23,9 @@ impl Settings {
         Settings {
             username: None,
             password: None,
+            // Default to saving username but not password
+            save_username: true,
+            save_password: false,
             download_location: None,
             dirty: false,
             saving: false,
@@ -28,8 +33,12 @@ impl Settings {
     }
 
     pub fn set_login_details(&mut self, username: String, password: String) {
-        self.username = Some(username);
-        self.password = Some(password);
+        if self.save_username {
+            self.username = Some(username);
+        }
+        if self.save_password {
+            self.password = Some(password);
+        }
         self.dirty = true;
     }
 
