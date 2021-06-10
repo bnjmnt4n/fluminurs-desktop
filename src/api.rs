@@ -50,6 +50,7 @@ pub async fn load_modules(
         last_updated,
         items,
         fetch_status: FetchStatus::Idle,
+        download_all_status: FetchStatus::Idle,
     })
 }
 
@@ -116,6 +117,7 @@ pub async fn load_modules_files(
         last_updated,
         items: files,
         fetch_status: FetchStatus::Idle,
+        download_all_status: FetchStatus::Idle,
     })
 }
 
@@ -185,6 +187,7 @@ pub async fn load_modules_multimedia(
         last_updated,
         items: videos,
         fetch_status: FetchStatus::Idle,
+        download_all_status: FetchStatus::Idle,
     })
 }
 
@@ -249,6 +252,7 @@ pub async fn load_modules_weblectures(
         last_updated,
         items: files,
         fetch_status: FetchStatus::Idle,
+        download_all_status: FetchStatus::Idle,
     })
 }
 
@@ -313,6 +317,7 @@ pub async fn load_modules_conferences(
         last_updated,
         items: zoom_recordings,
         fetch_status: FetchStatus::Idle,
+        download_all_status: FetchStatus::Idle,
     })
 }
 

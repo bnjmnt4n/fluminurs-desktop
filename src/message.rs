@@ -42,6 +42,8 @@ pub enum Message {
     ResourceMessage((ResourceType, String, PathBuf, ResourceMessage)),
     ResourceDownloaded((ResourceType, String, PathBuf, Result<PathBuf, Error>)),
     OpenFileResult(Result<std::process::ExitStatus, std::io::Error>),
+
+    DownloadAllResources((ResourceType)),
 }
 
 pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command<Message> {
@@ -378,6 +380,34 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
 
             Command::perform(state.data.save(), Message::DataSaved)
         }
+
+        // Download all resources
+        Message::DownloadAllResources((resource_type)) => {
+            // Note: we clone the API here so it can be passed across threads to be used
+            // in an iced Command.
+            let api = state.api.as_ref().cloned();
+            match api {
+                Some(_api) => {
+                    let download_all_status = get_download_all_status(state, resource_type);
+                    *download_all_status = FetchStatus::Fetching;
+                    let resources = get_resources_items(state, resource_type);
+                    let _resources: Vec<ResourceState> = resources
+                        .iter_mut()
+                        .filter(|file| file.download_status != FetchStatus::Fetching)
+                        .map(|file| {
+                            file.download_status = FetchStatus::Fetching;
+                            file.clone()
+                        })
+                        .collect();
+
+                    // TODO: perform download all action
+
+                    Command::none()
+                }
+                // TODO: if there's no API, try to re-authenticate?
+                None => Command::none(),
+            }
+        }
     }
 }
 
@@ -411,5 +441,17 @@ fn get_fetch_status(state: &mut FluminursDesktop, resource_type: ResourceType) -
         ResourceType::Multimedia => &mut state.data.multimedia.fetch_status,
         ResourceType::Weblecture => &mut state.data.weblectures.fetch_status,
         ResourceType::Conference => &mut state.data.conferences.fetch_status,
+    }
+}
+
+fn get_download_all_status(
+    state: &mut FluminursDesktop,
+    resource_type: ResourceType,
+) -> &mut FetchStatus {
+    match resource_type {
+        ResourceType::File => &mut state.data.files.download_all_status,
+        ResourceType::Multimedia => &mut state.data.multimedia.download_all_status,
+        ResourceType::Weblecture => &mut state.data.weblectures.download_all_status,
+        ResourceType::Conference => &mut state.data.conferences.download_all_status,
     }
 }
