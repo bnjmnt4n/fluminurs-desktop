@@ -10,7 +10,7 @@ pub struct Settings {
     password: Option<String>,
     save_username: bool,
     save_password: bool,
-    download_location: Option<String>,
+    download_location: Option<PathBuf>,
 
     #[serde(skip)]
     dirty: bool,
@@ -26,7 +26,7 @@ impl Settings {
             // Default to saving username but not password
             save_username: true,
             save_password: false,
-            download_location: None,
+            download_location: Some(default_download_dir()),
             dirty: false,
             saving: false,
         }
@@ -62,6 +62,11 @@ impl Settings {
         self.dirty = true;
     }
 
+    pub fn set_download_location(&mut self, download_location: PathBuf) {
+        self.download_location = Some(download_location);
+        self.dirty = true;
+    }
+
     pub fn get_username(&self) -> &Option<String> {
         &self.username
     }
@@ -76,6 +81,10 @@ impl Settings {
 
     pub fn get_save_password(&self) -> bool {
         self.save_password
+    }
+
+    pub fn get_download_location(&self) -> &Option<PathBuf> {
+        &self.download_location
     }
 }
 
@@ -94,4 +103,15 @@ impl Storage for Settings {
     fn get_saving(&mut self) -> &mut bool {
         &mut self.saving
     }
+}
+
+pub fn default_download_dir() -> PathBuf {
+    let mut download_dir: PathBuf = directories::UserDirs::new()
+        .unwrap()
+        .download_dir()
+        .unwrap()
+        .into();
+    download_dir.push("LumiNUS");
+
+    download_dir
 }

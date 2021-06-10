@@ -327,25 +327,26 @@ fn make_temp_file_name(name: &OsStr) -> OsString {
 pub async fn download_resource(
     api: Api,
     resource: Resource,
+    download_dir: Option<PathBuf>,
     download_path: PathBuf,
     path: PathBuf,
     // overwrite_mode: OverwriteMode,
 ) -> Result<PathBuf, Error> {
     match resource {
         Resource::File(resource) => {
-            download_fluminurs_resource(api, resource, download_path, path).await
+            download_fluminurs_resource(api, resource, download_dir, download_path, path).await
         }
         Resource::InternalVideo(resource) => {
-            download_fluminurs_resource(api, resource, download_path, path).await
+            download_fluminurs_resource(api, resource, download_dir, download_path, path).await
         }
         Resource::ExternalVideo(resource) => {
-            download_fluminurs_resource(api, resource, download_path, path).await
+            download_fluminurs_resource(api, resource, download_dir, download_path, path).await
         }
         Resource::WebLectureVideo(resource) => {
-            download_fluminurs_resource(api, resource, download_path, path).await
+            download_fluminurs_resource(api, resource, download_dir, download_path, path).await
         }
         Resource::ZoomRecording(resource) => {
-            download_zoom_recording(api, resource, download_path, path).await
+            download_zoom_recording(api, resource, download_dir, download_path, path).await
         }
     }
 }
@@ -353,12 +354,18 @@ pub async fn download_resource(
 pub async fn download_fluminurs_resource<T: FluminursResource>(
     api: Api,
     file: T,
+    download_dir: Option<PathBuf>,
     path: PathBuf,
     return_path: PathBuf,
     // overwrite_mode: OverwriteMode,
 ) -> Result<PathBuf, Error> {
-    // TODO: customize destination path
-    let dest_path = Path::new(".");
+    // Use the current working directory if we can't get a default download location.
+    // Note: fluminurs will ensure that the full path to the directory exists.
+    let dest_path = if let Some(dest_path) = download_dir {
+        dest_path
+    } else {
+        Path::new(".").to_path_buf()
+    };
     let temp_path = dest_path
         .join(path.parent().unwrap())
         .join(make_temp_file_name(path.file_name().unwrap()));
@@ -385,6 +392,7 @@ pub async fn download_fluminurs_resource<T: FluminursResource>(
             Ok(return_path)
         }
         Ok(OverwriteResult::Renamed { renamed_path }) => {
+            // TODO: handle renamed files
             println!(
                 "Renamed {} to {}",
                 path.to_string_lossy(),
@@ -402,6 +410,7 @@ pub async fn download_fluminurs_resource<T: FluminursResource>(
 pub async fn download_zoom_recording<T: FluminursResource>(
     mut api: Api,
     file: T,
+    download_dir: Option<PathBuf>,
     download_path: PathBuf,
     path: PathBuf,
     // overwrite_mode: OverwriteMode,
@@ -410,11 +419,11 @@ pub async fn download_zoom_recording<T: FluminursResource>(
         Err(e) => {
             println!("Failed to log in to Zoom: {}", e);
             // TODO
-            download_fluminurs_resource(api, file, download_path, path).await
+            download_fluminurs_resource(api, file, download_dir, download_path, path).await
         }
         Ok(_) => {
             println!("Logged in to Zoom");
-            download_fluminurs_resource(api, file, download_path, path).await
+            download_fluminurs_resource(api, file, download_dir, download_path, path).await
         }
     }
 }
