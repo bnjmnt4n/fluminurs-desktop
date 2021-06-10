@@ -31,6 +31,9 @@ pub enum Message {
     Header(HeaderMessage),
     SwitchPage(Page),
 
+    ToggleSaveUsername(bool),
+    ToggleSavePassword(bool),
+
     Startup((Result<Settings, Error>, Result<Data, Error>)),
     SettingsSaved(Result<StorageWrite, Error>),
     DataSaved(Result<StorageWrite, Error>),
@@ -61,6 +64,16 @@ pub fn handle_message(state: &mut FluminursDesktop, message: Message) -> Command
         Message::SwitchPage(page) => {
             state.current_page = page;
             Command::none()
+        }
+
+        // Toggling the save username/password settings.
+        Message::ToggleSaveUsername(save_username) => {
+            state.settings.set_save_username(save_username);
+            Command::perform(state.settings.save(), Message::SettingsSaved)
+        }
+        Message::ToggleSavePassword(save_password) => {
+            state.settings.set_save_password(save_password);
+            Command::perform(state.settings.save(), Message::SettingsSaved)
         }
 
         Message::Startup((settings, data)) => {

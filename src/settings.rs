@@ -8,6 +8,8 @@ use crate::storage::{get_project_dirs, Storage};
 pub struct Settings {
     username: Option<String>,
     password: Option<String>,
+    save_username: bool,
+    save_password: bool,
     download_location: Option<String>,
 
     #[serde(skip)]
@@ -21,15 +23,42 @@ impl Settings {
         Settings {
             username: None,
             password: None,
+            // Default to saving username but not password
+            save_username: true,
+            save_password: false,
             download_location: None,
             dirty: false,
             saving: false,
         }
     }
 
+    pub fn set_save_username(&mut self, save_username: bool) {
+        if self.save_username != save_username {
+            self.save_username = save_username;
+            if !save_username && self.username.is_some() {
+                self.username = None;
+            }
+            self.dirty = true;
+        }
+    }
+
+    pub fn set_save_password(&mut self, save_password: bool) {
+        if self.save_password != save_password {
+            self.save_password = save_password;
+            if !save_password && self.password.is_some() {
+                self.password = None;
+            }
+            self.dirty = true;
+        }
+    }
+
     pub fn set_login_details(&mut self, username: String, password: String) {
-        self.username = Some(username);
-        self.password = Some(password);
+        if self.save_username {
+            self.username = Some(username);
+        }
+        if self.save_password {
+            self.password = Some(password);
+        }
         self.dirty = true;
     }
 
@@ -39,6 +68,14 @@ impl Settings {
 
     pub fn get_password(&self) -> &Option<String> {
         &self.password
+    }
+
+    pub fn get_save_username(&self) -> bool {
+        self.save_username
+    }
+
+    pub fn get_save_password(&self) -> bool {
+        self.save_password
     }
 }
 
