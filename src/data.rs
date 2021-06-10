@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::module::Module;
 use crate::resource::ResourceState;
-use crate::storage::Storage;
+use crate::storage::{get_project_dirs, Storage};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Data {
@@ -73,8 +73,7 @@ impl Data {
 
 impl Storage for Data {
     fn path() -> PathBuf {
-        // TODO: change to default OS storage directory?
-        let mut path = std::env::current_dir().unwrap_or(PathBuf::new());
+        let mut path: PathBuf = get_project_dirs().data_dir().into();
         path.push("data.json");
 
         path

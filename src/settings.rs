@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::storage::Storage;
+use crate::storage::{get_project_dirs, Storage};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -44,8 +44,7 @@ impl Settings {
 
 impl Storage for Settings {
     fn path() -> PathBuf {
-        // TODO: change to default OS storage directory?
-        let mut path = std::env::current_dir().unwrap_or(PathBuf::new());
+        let mut path: PathBuf = get_project_dirs().config_dir().into();
         path.push("settings.json");
 
         path
