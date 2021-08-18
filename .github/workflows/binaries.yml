@@ -6,19 +6,7 @@ on:
     branches:
       - main
       - build
-    paths:
-      - '**.rs'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'resources'
-      - '.github/workflows'
   pull_request:
-    paths:
-      - '**.rs'
-      - 'Cargo.lock'
-      - 'Cargo.toml'
-      - 'resources'
-      - '.github/workflows'
 
 name: "Build binaries"
 
