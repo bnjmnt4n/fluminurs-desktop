@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Terminal=false
+Exec=fluminurs-desktop
+Name=fluminurs-desktop
+Icon=fluminurs-desktop
+Categories=Utility;
