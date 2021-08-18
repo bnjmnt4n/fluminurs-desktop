@@ -19,21 +19,17 @@ jobs:
           - target: windows
             os: windows-latest
             make: make binary
-            binary_path: target/release/ajour.exe
+            binary_path: target/release/fluminurs-desktop.exe
 
           - target: linux
             os: ubuntu-latest
             make: make appimage
-            binary_path: ajour.AppImage
+            binary_path: fluminurs-desktop.AppImage
 
           - target: macos
             os: macos-latest
             make: make dmg MACOS=1
-            binary_path: target/release/osx/ajour.dmg
-          - target: macos-tar
-            os: macos-latest
-            make: make tar MACOS=1
-            binary_path: target/release/ajour.tar.gz
+            binary_path: target/release/osx/fluminurs-desktop.dmg
 
     runs-on: ${{ matrix.target.os }}
 
