@@ -26,7 +26,7 @@ pub async fn login(
         .with_ffmpeg("ffmpeg".to_owned());
 
     // TODO: no hardcode!
-    let modules = load_modules(&api, Some("2010".to_string()), SystemTime::now()).await?;
+    let modules = load_modules(&api, Some("2110".to_string()), SystemTime::now()).await?;
 
     Ok((api, username, password, modules))
 }
